@@ -50,28 +50,21 @@ $daily_runs = db_all("
 <div class="row g-3 mb-4">
   <?php
   $cards = [
-    ['label'=>'Total Records',     'value'=>$stats['total_records'],   'icon'=>'fas fa-database',         'cls'=>'green'],
-    ['label'=>'Active Sources',    'value'=>$stats['enabled_sources'],  'icon'=>'fas fa-database',         'cls'=>'green'],
-    ['label'=>'GPS Records',       'value'=>$stats['gps_records'],     'icon'=>'fas fa-map-marker-alt',   'cls'=>'green'],
-    ['label'=>'Runs Today',        'value'=>$stats['runs_today'],      'icon'=>'fas fa-calendar-day',       'cls'=>'yellow'],
-    ['label'=>'Failed (24h)',      'value'=>$stats['failed_runs'],     'icon'=>'fas fa-exclamation-triangle', 'cls'=>'red'],
-    ['label'=>'Active Schedules',  'value'=>$stats['total_schedules'], 'icon'=>'fas fa-clock',                'cls'=>'blue'],
+    ['label'=>'Total Records',    'value'=>$stats['total_records'],   'icon'=>'fa-database',            'cls'=>'green'],
+    ['label'=>'Active Sources',   'value'=>$stats['enabled_sources'], 'icon'=>'fa-satellite-dish',      'cls'=>'blue'],
+    ['label'=>'GPS Records',      'value'=>$stats['gps_records'],     'icon'=>'fa-map-location-dot',    'cls'=>'teal'],
+    ['label'=>'Runs Today',       'value'=>$stats['runs_today'],      'icon'=>'fa-bolt',                'cls'=>'purple'],
+    ['label'=>'Failed (24h)',     'value'=>$stats['failed_runs'],     'icon'=>'fa-triangle-exclamation','cls'=>'red'],
+    ['label'=>'Active Schedules', 'value'=>$stats['total_schedules'], 'icon'=>'fa-clock',               'cls'=>'orange'],
   ];
   foreach ($cards as $c):
   ?>
   <div class="col-6 col-md-4 col-xl-2">
     <div class="card stat-card <?= $c['cls'] ?> h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div>
-          <div class="stat-value">
-              <?= h(number_format($c['value'])) ?>
-          </div>
-          <div class="stat-label mt-1">
-              <i class="fas fa-tag me-1"></i>
-              <?= h($c['label']) ?>
-          </div>
-        </div>
-        <i class="fas fa-<?= $c['icon'] ?> fa-2x"></i>
+      <div class="card-body">
+        <div class="stat-value"><?= h(number_format($c['value'])) ?></div>
+        <div class="stat-label"><?= h($c['label']) ?></div>
+        <i class="fas <?= h($c['icon']) ?> stat-icon"></i>
       </div>
     </div>
   </div>

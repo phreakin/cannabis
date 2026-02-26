@@ -12,31 +12,22 @@ $page_title   = $page_title ?? APP_NAME;
 $active_page  = $active_page ?? '';
 
 // Use the absolute URL base computed in config.php — works at any nesting depth.
-// e.g. /cannabis-data-aggregator/web/   so links never break.
 $base = WEB_BASE;
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
-    <link rel="stylesheet" type="text/css" href="../assets/css/custom.css"/>
-    <link rel="stylesheet" type="text/css" href="../assets/css/custom.css"/>
-    <link rel="stylesheet" type="text/css" href="../assets/css/custom.css"/>
-    <link rel="stylesheet" type="text/css" href="../assets/css/custom.css"/>
-    <link rel="stylesheet" type="text/css" href="../assets/css/custom.css"/>
-    <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= h($page_title) ?> – <?= h(APP_NAME) ?></title>
-
-<!-- Bootstrap 5 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@latest/dist/css/bootstrap.min.css">
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@latest/css/all.min.css">
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@latest/font/bootstrap-icons.min.css">
-<!-- Chart.js (loaded in footer) -->
-<!-- Leaflet (loaded per-page) -->
-<!-- Custom -->
-<link rel="stylesheet" href="<?= $base ?>assets/css/custom.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= h($page_title) ?> – <?= h(APP_NAME) ?></title>
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Custom theme -->
+  <link rel="stylesheet" href="<?= $base ?>assets/css/custom.css">
 </head>
 <body>
 
@@ -44,128 +35,105 @@ $base = WEB_BASE;
 <div class="d-flex" id="wrapper">
 
 <nav id="sidebar" class="d-flex flex-column flex-shrink-0 p-3">
-  <a href="<?= $base ?>index.php" class="d-flex align-items-center mb-3 text-decoration-none link-light">
-    <i class="fas fa-seedling me-2"></i>
-    <span class="fs-6 fw-semibold">
-        <?= h(APP_NAME) ?>
-    </span>
+
+  <!-- Brand -->
+  <a href="<?= $base ?>index.php" class="d-flex align-items-center gap-2 mb-2 text-decoration-none" style="padding:.4rem .5rem">
+    <div style="width:30px;height:30px;background:linear-gradient(135deg,#2ea043,#20c997);border-radius:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 12px rgba(46,160,67,.35);flex-shrink:0">
+      <i class="fas fa-seedling" style="color:#fff;font-size:.85rem;margin:0"></i>
+    </div>
+    <span class="fs-6 fw-bold" style="color:#e6edf3;font-size:.82rem!important;letter-spacing:-.01em;white-space:nowrap"><?= h(APP_NAME) ?></span>
   </a>
+
   <hr class="border-secondary">
 
-  <ul class="nav nav-pills flex-column mb-auto gap-1">
+  <ul class="nav nav-pills flex-column gap-1" style="flex:1">
+
+    <!-- Collection -->
+    <li class="mt-1 mb-1 px-2">
+      <small class="text-uppercase text-secondary fw-semibold" style="font-size:.62rem;letter-spacing:.1em">Collection</small>
+    </li>
     <li class="nav-item">
-      <a href="<?= $base ?>index.php"
-         class="nav-link <?= $active_page === 'dashboard' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-tachometer-alt me-2"></i>
-          Dashboard
+      <a href="<?= $base ?>index.php" class="nav-link <?= $active_page === 'dashboard' ? 'active' : '' ?>">
+        <i class="fas fa-gauge-high"></i> Dashboard
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>sources.php"
-         class="nav-link <?= $active_page === 'sources' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-database me-2"></i>
-          Data Sources
+      <a href="<?= $base ?>sources.php" class="nav-link <?= $active_page === 'sources' ? 'active' : '' ?>">
+        <i class="fas fa-database"></i> Data Sources
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>schedules.php"
-         class="nav-link <?= $active_page === 'schedules' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-clock me-2"></i>
-          Schedules
+      <a href="<?= $base ?>schedules.php" class="nav-link <?= $active_page === 'schedules' ? 'active' : '' ?>">
+        <i class="fas fa-clock"></i> Schedules
       </a>
     </li>
 
+    <!-- Data -->
     <li class="mt-2 mb-1 px-2">
-      <small class="text-uppercase text-secondary fw-semibold">
-          <i class="fas fa-database me-2"></i>
-          Data
-      </small>
+      <small class="text-uppercase text-secondary fw-semibold" style="font-size:.62rem;letter-spacing:.1em">Data</small>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>data.php"
-         class="nav-link <?= $active_page === 'data' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-table me-2"></i>
-          Browse Records
+      <a href="<?= $base ?>data.php" class="nav-link <?= $active_page === 'data' ? 'active' : '' ?>">
+        <i class="fas fa-table"></i> Browse Records
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>map.php"
-         class="nav-link <?= $active_page === 'map' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-map-marked-alt me-2"></i>
-          Map View
+      <a href="<?= $base ?>map.php" class="nav-link <?= $active_page === 'map' ? 'active' : '' ?>">
+        <i class="fas fa-map-location-dot"></i> Map View
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>exports.php"
-         class="nav-link <?= $active_page === 'exports' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-file-export me-2"></i>
-          Export
+      <a href="<?= $base ?>exports.php" class="nav-link <?= $active_page === 'exports' ? 'active' : '' ?>">
+        <i class="fas fa-file-arrow-down"></i> Export
       </a>
     </li>
 
+    <!-- System -->
     <li class="mt-2 mb-1 px-2">
-      <small class="text-uppercase text-secondary fw-semibold">
-          System
-      </small>
+      <small class="text-uppercase text-secondary fw-semibold" style="font-size:.62rem;letter-spacing:.1em">System</small>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>logs.php"
-         class="nav-link <?= $active_page === 'logs' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-file-alt me-2"></i>
-          Logs
+      <a href="<?= $base ?>logs.php" class="nav-link <?= $active_page === 'logs' ? 'active' : '' ?>">
+        <i class="fas fa-scroll"></i> Logs
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>scripts.php"
-         class="nav-link <?= $active_page === 'scripts' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-terminal me-2"></i>
-          Scripts
+      <a href="<?= $base ?>scripts.php" class="nav-link <?= $active_page === 'scripts' ? 'active' : '' ?>">
+        <i class="fas fa-terminal"></i> Scripts
       </a>
     </li>
     <li class="nav-item">
-      <a href="<?= $base ?>settings.php"
-         class="nav-link <?= $active_page === 'settings' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-cogs me-2"></i>
-          Settings
+      <a href="<?= $base ?>settings.php" class="nav-link <?= $active_page === 'settings' ? 'active' : '' ?>">
+        <i class="fas fa-gear"></i> Settings
+      </a>
+    </li>
+    <li class="nav-item">
+      <a href="<?= $base ?>instructions.php" class="nav-link <?= $active_page === 'instructions' ? 'active' : '' ?>">
+        <i class="fas fa-book-open"></i> Instructions
       </a>
     </li>
 
-    <li class="mt-2 mb-1 px-2">
-      <small class="text-uppercase text-secondary fw-semibold">
-          <i class="fas fa-question-circle me-2"></i>
-          Help
-      </small>
-    </li>
-    <li class="nav-item">
-      <a href="<?= $base ?>instructions.php"
-         class="nav-link <?= $active_page === 'instructions' ? 'active' : 'link-light' ?>">
-        <i class="fas fa-book me-2"></i>
-          Instructions
-      </a>
-    </li>
   </ul>
 
-  <hr class="border-secondary">
-  <div class="text-secondary">
+  <hr class="border-secondary" style="margin-top:.75rem">
+  <div style="font-size:.7rem;color:#484f58;padding-left:.25rem">
     v<?= h(APP_VERSION) ?> &nbsp;·&nbsp; <?= date('m/d/Y') ?>
   </div>
+
 </nav>
 
 <!-- ── Main content ──────────────────────────────────────────────────────── -->
 <div id="page-content" class="flex-grow-1 overflow-auto">
 
   <!-- Top bar -->
-  <div class="topbar d-flex align-items-center px-4 py-2 border-bottom border-secondary">
-    <button class="btn btn-sm btn-outline-secondary me-3" id="sidebarToggle" title="Toggle sidebar">
+  <div class="topbar">
+    <button class="btn btn-sm btn-outline-secondary" id="sidebarToggle" title="Toggle sidebar">
       <i class="fas fa-bars"></i>
     </button>
-    <h6 class="mb-0 fw-semibold">
-        <?= h($page_title) ?>
-    </h6>
+    <h6 class="mb-0 fw-semibold"><?= h($page_title) ?></h6>
     <div class="ms-auto d-flex align-items-center gap-2">
       <span id="db-status" class="badge bg-success" title="Database connected">
-        <i class="fas fa-check me-1"></i>
-          DB
+        <i class="fas fa-circle-dot me-1"></i>Live
       </span>
     </div>
   </div>
