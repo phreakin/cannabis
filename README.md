@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Cannabis Data Aggregator
 
 Automated collection and management of US cannabis open data from state and federal APIs.
@@ -483,3 +484,7 @@ docker run -d \
 ## License
 
 MIT
+=======
+# cannabis
+A Cannabis public content acquisition dashboard and web site to automate and display the publicly available cannabis information from state and federal government data resources
+>>>>>>> e27ffb1ac5cd4c841b3a06cfc8f5e6e9b8c5c441

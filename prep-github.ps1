@@ -20,26 +20,57 @@ function Invoke-Git {
         [switch]$Fatal
     )
 
-    # Run git and capture output WITHOUT triggering PS errors
-    $output = & git @($Args -split ' ') 2>&1 | ForEach-Object { $_ }
+    $tmpOut = [System.IO.Path]::GetTempFileName()
+    $tmpErr = [System.IO.Path]::GetTempFileName()
 
-    $exit = $LASTEXITCODE
+    try {
+        $p = Start-Process -FilePath "git" `
+      -ArgumentList $Args `
+      -NoNewWindow `
+      -Wait `
+      -PassThru `
+      -RedirectStandardOutput $tmpOut `
+      -RedirectStandardError $tmpErr
 
-    # Success = green, failure = red
-    $color = if ($exit -eq 0) { 'Green' } else { 'Red' }
+        $exit = $p.ExitCode
 
-    foreach ($line in $output) {
-        $text = "$line"
-        if ($text.Trim().Length -gt 0) {
-            Write-Host $text -ForegroundColor $color
+        $stdout = @()
+        $stderr = @()
+
+        if (Test-Path $tmpOut) { $stdout = Get-Content -Path $tmpOut -ErrorAction SilentlyContinue }
+        if (Test-Path $tmpErr) { $stderr = Get-Content -Path $tmpErr -ErrorAction SilentlyContinue }
+
+        # Print line-by-line with smart coloring:
+        # - fatal/error -> Red
+        # - warning -> Yellow
+        # - normal output -> Gray on success, Red on failure
+        $baseColor = if ($exit -eq 0) { 'Gray' } else { 'Red' }
+
+        foreach ($line in ($stdout + $stderr)) {
+            $t = "$line"
+            if ($t.Trim().Length -eq 0) { continue }
+
+            $lc = $t.ToLowerInvariant()
+            if ($lc.StartsWith("fatal:") -or $lc.StartsWith("error:")) {
+                Write-Host $t -ForegroundColor Red
+            }
+            elseif ($lc.StartsWith("warning:")) {
+                Write-Host $t -ForegroundColor Yellow
+            }
+            else {
+                Write-Host $t -ForegroundColor $baseColor
+            }
         }
-    }
 
-    if ($exit -ne 0 -and $Fatal) {
-        throw "git $Args failed (exit code $exit)"
-    }
+        if ($exit -ne 0 -and $Fatal) {
+            throw "git $Args failed (exit code $exit)"
+        }
 
-    return $exit
+        return $exit
+    }
+    finally {
+        Remove-Item $tmpOut, $tmpErr -ErrorAction SilentlyContinue
+    }
 }
 
 Write-Host "Preparing GitHub repo: $Repo (branch: $Branch)" -ForegroundColor Cyan
@@ -49,7 +80,7 @@ Require-Cmd git
 # --- Ensure we're in a repo root (or init it) ---
 if (-not (Test-Path ".git")) {
     Write-Host "No .git found, initializing new repository..." -ForegroundColor Yellow
-    Invoke-Git -Args "init" -Fatal
+    Invoke-Git -Args "init" -Fatal | Out-Null
 } else {
     Write-Host "Git repository detected." -ForegroundColor Green
 }
@@ -177,9 +208,6 @@ site/
 
 # PHP / Composer
 /vendor/
-
-# IDE (redundant safety)
-.idea/
 "@ | Set-Content -Encoding UTF8 $gitignorePath
     Write-Host "Created .gitignore" -ForegroundColor Green
 } else {
@@ -225,23 +253,19 @@ Describe the purpose of this repository in 1–2 sentences.
 
 # --- Normalize branch name ---
 Write-Host "Ensuring branch is named: $Branch" -ForegroundColor Cyan
-Invoke-Git -Args "branch -M $Branch" -Fatal
+Invoke-Git -Args "branch -M $Branch" -Fatal | Out-Null
 
 # --- Set/repair remote origin ---
 Write-Host "Ensuring remote origin is set to: $Repo" -ForegroundColor Cyan
 $existingOrigin = ""
-try {
-    $existingOrigin = (git remote get-url origin 2>$null)
-} catch {
-    $existingOrigin = ""
-}
+try { $existingOrigin = (git remote get-url origin 2>$null) } catch { $existingOrigin = "" }
 
 if ([string]::IsNullOrWhiteSpace($existingOrigin)) {
     Write-Host "No origin found. Adding origin..." -ForegroundColor Yellow
-    Invoke-Git -Args "remote add origin $Repo" -Fatal
+    Invoke-Git -Args "remote add origin $Repo" -Fatal | Out-Null
 } elseif ($existingOrigin -ne $Repo) {
     Write-Host "Origin differs. Updating origin..." -ForegroundColor Yellow
-    Invoke-Git -Args "remote set-url origin $Repo" -Fatal
+    Invoke-Git -Args "remote set-url origin $Repo" -Fatal | Out-Null
 } else {
     Write-Host "Origin already set correctly." -ForegroundColor Green
 }
@@ -252,7 +276,7 @@ git status
 
 # --- Stage changes ---
 Write-Host "`n--- staging changes ---" -ForegroundColor Cyan
-Invoke-Git -Args "add -A" -Fatal
+Invoke-Git -Args "add -A" -Fatal | Out-Null
 Write-Host "Staging complete." -ForegroundColor Green
 
 # --- Commit message default ---
@@ -268,16 +292,16 @@ if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
 Write-Host "`n--- committing ---" -ForegroundColor Cyan
 $staged = git diff --cached --name-only
 if ($staged) {
-    Invoke-Git -Args "commit -m `"$CommitMessage`"" -Fatal
+    Invoke-Git -Args "commit -m `"$CommitMessage`"" -Fatal | Out-Null
     Write-Host "Commit successful." -ForegroundColor Green
 } else {
     Write-Host "No staged changes to commit." -ForegroundColor Yellow
 }
 
-# --- Pull remote changes (handles “fetch first” + unrelated histories) ---
+# --- Pull ---
 Write-Host "`n--- pulling ---" -ForegroundColor Cyan
 try {
-    Invoke-Git -Args "pull origin $Branch --allow-unrelated-histories" -Fatal
+    Invoke-Git -Args "pull origin $Branch --allow-unrelated-histories" -Fatal | Out-Null
     Write-Host "Pull successful." -ForegroundColor Green
 } catch {
     Write-Host "Pull failed. If there are conflicts:" -ForegroundColor Red
@@ -290,7 +314,7 @@ try {
 
 # --- Push ---
 Write-Host "`n--- pushing ---" -ForegroundColor Cyan
-Invoke-Git -Args "push -u origin $Branch" -Fatal
+Invoke-Git -Args "push -u origin $Branch" -Fatal | Out-Null
 Write-Host "Push successful." -ForegroundColor Green
 
 Write-Host "`nDone. Synced with: $Repo ($Branch)" -ForegroundColor Green
