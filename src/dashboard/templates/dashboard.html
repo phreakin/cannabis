@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Cannabis Data Aggregator{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-sm btn-primary" onclick="runAllEnabled()">
+  <i class="bi bi-play-circle me-1"></i> Run All Enabled
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- STAT CARDS -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="stat-icon" style="background:#e8f5e9;">
+        <span style="color:#2e7d32;">🗄️</span>
+      </div>
+      <div>
+        <div class="stat-value" id="stat-records">{{ "{:,}".format(stats.total_records) }}</div>
+        <div class="stat-label">Total Records</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="stat-icon" style="background:#e3f2fd;">
+        <span style="color:#1565c0;">📡</span>
+      </div>
+      <div>
+        <div class="stat-value">{{ stats.enabled_sources }}<span style="font-size:1rem;color:#aaa;">/{{ stats.total_sources }}</span></div>
+        <div class="stat-label">Active Sources</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="stat-icon" style="background:#fce4ec;">
+        <span style="color:#880e4f;">📍</span>
+      </div>
+      <div>
+        <div class="stat-value" id="stat-geo">{{ "{:,}".format(stats.geo_records) }}</div>
+        <div class="stat-label">With GPS Coords</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="stat-icon" style="background:#f3e5f5;">
+        <span style="color:#6a1b9a;">🗺️</span>
+      </div>
+      <div>
+        <div class="stat-value">{{ stats.states_covered }}</div>
+        <div class="stat-label">States Covered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SECOND ROW STATS -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="text-muted-sm mb-1">Last Run</div>
+      <div class="fw-semibold">
+        {% if stats.last_run %}
+          <span class="status-dot {{ stats.last_run_status }}"></span>
+          {{ stats.last_run[:16].replace('T', ' ') }}
+        {% else %}
+          <span class="text-muted">No runs yet</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="text-muted-sm mb-1">Last 7 Days</div>
+      <div class="d-flex gap-3">
+        <div><span class="text-success fw-bold">{{ stats.recent_success }}</span> <small class="text-muted">ok</small></div>
+        <div><span class="text-danger fw-bold">{{ stats.recent_failed }}</span> <small class="text-muted">fail</small></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="text-muted-sm mb-1">Active Schedules</div>
+      <div class="fw-semibold">{{ stats.active_schedules }}<span class="text-muted">/{{ stats.total_schedules }}</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="text-muted-sm mb-1">Quick Actions</div>
+      <div class="d-flex gap-2">
+        <a href="/data" class="btn btn-xs btn-outline-primary btn-sm">Browse</a>
+        <a href="/data/map" class="btn btn-xs btn-outline-secondary btn-sm">Map</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHARTS + RECENT RUNS -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Records by Category</span>
+        <a href="/data" class="btn btn-xs btn-sm btn-link p-0 text-muted">View all</a>
+      </div>
+      <div class="card-body">
+        <canvas id="categoryChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Records by State (Top 10)</div>
+      <div class="card-body">
+        <canvas id="stateChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Recent Runs</div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush" style="font-size:.82rem;">
+          {% for run in recent_runs %}
+          <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+            <div>
+              <div class="fw-semibold text-truncate" style="max-width:140px;" title="{{ run.source_name }}">
+                {{ run.source_name }}
+              </div>
+              <div class="text-muted" style="font-size:.72rem;">
+                {{ run.started_at[:16].replace('T', ' ') if run.started_at else '—' }}
+              </div>
+            </div>
+            <div class="text-end">
+              <span class="badge rounded-pill badge-{{ run.status }}">{{ run.status }}</span>
+              <div class="text-muted" style="font-size:.7rem;">{{ run.records_stored or 0 }} rec</div>
+            </div>
+          </div>
+          {% else %}
+          <div class="list-group-item text-muted text-center py-4">No runs yet</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DATA SOURCES STATUS TABLE -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Data Sources Overview</span>
+        <a href="/sources" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-gear me-1"></i>Manage Sources
+        </a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" id="sourcesOverviewTable">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>State</th>
+                <th>Category</th>
+                <th>Format</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="sourcesOverviewBody">
+              <tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECENT LOGS -->
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Recent Activity Logs</span>
+        <a href="/data/logs" class="btn btn-sm btn-link text-muted">View all</a>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0" style="font-size:.8rem;">
+            <thead>
+              <tr>
+                <th width="150">Time</th>
+                <th width="70">Level</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in recent_logs %}
+              <tr>
+                <td class="text-muted">{{ log.timestamp[:19].replace('T', ' ') if log.timestamp else '' }}</td>
+                <td><span class="log-{{ log.level }} fw-semibold">{{ log.level }}</span></td>
+                <td class="text-truncate" style="max-width:500px;">{{ log.message }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center text-muted py-3">No log entries yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const categoryData = {{ category_breakdown | tojson }};
+const stateData = {{ state_breakdown | tojson }};
+
+// Category donut chart
+if (categoryData.length) {
+  const catCtx = document.getElementById('categoryChart').getContext('2d');
+  const catColors = [
+    '#4caf50','#81c784','#2196f3','#64b5f6','#ff9800',
+    '#ffb74d','#9c27b0','#ce93d8','#f44336','#ef9a9a',
+    '#009688','#4db6ac','#607d8b','#90a4ae',
+  ];
+  new Chart(catCtx, {
+    type: 'doughnut',
+    data: {
+      labels: categoryData.map(d => d.category),
+      datasets: [{
+        data: categoryData.map(d => d.count),
+        backgroundColor: catColors.slice(0, categoryData.length),
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } }
+      }
+    }
+  });
+}
+
+// State bar chart
+if (stateData.length) {
+  const stateCtx = document.getElementById('stateChart').getContext('2d');
+  new Chart(stateCtx, {
+    type: 'bar',
+    data: {
+      labels: stateData.slice(0,10).map(d => d.state),
+      datasets: [{
+        label: 'Records',
+        data: stateData.slice(0,10).map(d => d.count),
+        backgroundColor: '#4caf50',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// Load sources overview
+fetch('/api/sources?per_page=20')
+  .then(r => r.json())
+  .then(data => {
+    const tbody = document.getElementById('sourcesOverviewBody');
+    if (!data.sources.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No sources configured. <a href="/sources/new">Add one</a></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.sources.map(s => `
+      <tr>
+        <td>
+          <div class="fw-semibold">${s.name}</div>
+          <div class="text-muted" style="font-size:.72rem;">${s.source_id}</div>
+        </td>
+        <td><span class="badge bg-secondary">${s.state}</span></td>
+        <td><span class="category-pill" style="background:#e8f5e9;color:#2e7d32;">${s.category}</span></td>
+        <td><code style="font-size:.75rem;">${s.format.toUpperCase()}</code></td>
+        <td>
+          <span class="status-dot ${s.enabled ? 'success' : 'disabled'}"></span>
+          ${s.enabled ? '<span class="text-success">Enabled</span>' : '<span class="text-muted">Disabled</span>'}
+        </td>
+        <td class="text-end">
+          <button class="btn btn-xs btn-sm btn-outline-primary" onclick="runSource(${s.id}, '${s.name}')" title="Run Now">
+            <i class="bi bi-play"></i>
+          </button>
+          <a href="/sources/${s.id}/edit" class="btn btn-xs btn-sm btn-outline-secondary" title="Edit">
+            <i class="bi bi-pencil"></i>
+          </a>
+        </td>
+      </tr>
+    `).join('');
+  });
+
+function runSource(sourceId, name) {
+  if (!confirm(`Run collection for "${name}" now?`)) return;
+  showLoading(true);
+  fetch(`/api/sources/${sourceId}/run`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      showLoading(false);
+      showToast(
+        data.status === 'success'
+          ? `✅ Collected ${data.records_stored} records from ${name}`
+          : `❌ Failed: ${data.error || 'Unknown error'}`,
+        data.status === 'success' ? 'success' : 'danger'
+      );
+      if (data.status === 'success') setTimeout(() => location.reload(), 2000);
+    })
+    .catch(() => { showLoading(false); showToast('Request failed', 'danger'); });
+}
+
+function runAllEnabled() {
+  if (!confirm('Run all enabled data sources now? This may take a while.')) return;
+  showToast('⏳ Starting collection for all enabled sources...', 'info');
+}
+</script>
+{% endblock %}

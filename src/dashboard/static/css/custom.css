@@ -1,0 +1,312 @@
+/* =============================================================================
+   Cannabis Data Aggregator — Custom Styles
+   Supplements Bootstrap 5; sidebar defined in base.html <style>
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Typography & Base
+   --------------------------------------------------------------------------- */
+body {
+  font-size: 0.875rem;
+}
+
+.text-muted-sm {
+  font-size: 0.775rem;
+  color: #6c757d;
+}
+
+code {
+  font-size: 0.8em;
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+  background: #f0f4f0;
+  color: #1a5c2a;
+}
+
+/* ---------------------------------------------------------------------------
+   Cards
+   --------------------------------------------------------------------------- */
+.card {
+  border: 1px solid #e3e8e3;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+}
+
+.card-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #4a5568;
+  background: #f8fbf8;
+  border-bottom: 1px solid #e3e8e3;
+}
+
+/* Stat cards on dashboard */
+.stat-card {
+  transition: box-shadow .15s;
+}
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0,80,0,.08);
+}
+.stat-card .stat-value {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #1a2e1f;
+}
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #718096;
+}
+.stat-card .stat-icon {
+  font-size: 2rem;
+  opacity: .15;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables
+   --------------------------------------------------------------------------- */
+.table th {
+  font-size: 0.73rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #718096;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.table td {
+  vertical-align: middle;
+}
+.table-hover tbody tr:hover {
+  background-color: #f6faf6;
+}
+
+/* Compact action buttons inside tables */
+.table .btn-xs {
+  padding: .15rem .4rem;
+  font-size: .75rem;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Badges / Status
+   --------------------------------------------------------------------------- */
+.badge-success { background-color: #28a745; color: #fff; }
+.badge-failed  { background-color: #dc3545; color: #fff; }
+.badge-running { background-color: #007bff; color: #fff; }
+.badge-partial { background-color: #fd7e14; color: #fff; }
+.badge-skipped { background-color: #6c757d; color: #fff; }
+
+/* Pulsing dot for running jobs */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+.status-dot.running {
+  background: #007bff;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.status-dot.success { background: #28a745; }
+.status-dot.failed  { background: #dc3545; }
+.status-dot.skipped { background: #adb5bd; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .5; transform: scale(1.35); }
+}
+
+/* Priority badges */
+.priority-1 { color: #dc3545; font-weight: 700; }
+.priority-2 { color: #495057; }
+.priority-3 { color: #adb5bd; }
+
+/* ---------------------------------------------------------------------------
+   Forms
+   --------------------------------------------------------------------------- */
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+  color: #4a5568;
+}
+.form-control, .form-select {
+  font-size: 0.875rem;
+}
+.form-control:focus, .form-select:focus {
+  border-color: #2d6a4f;
+  box-shadow: 0 0 0 .2rem rgba(45,106,79,.15);
+}
+
+/* JSON textareas */
+.json-editor {
+  font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+  font-size: 0.78rem;
+  min-height: 80px;
+  background: #f8fbf8;
+}
+
+/* Toggle switch label */
+.form-switch .form-check-label {
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+   Source / Schedule format badges
+   --------------------------------------------------------------------------- */
+.fmt-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 700;
+  padding: .1em .45em;
+  border-radius: 3px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.fmt-soda    { background: #cfe2ff; color: #084298; }
+.fmt-csv     { background: #d1f7e8; color: #0a5130; }
+.fmt-json    { background: #fff3cd; color: #7d4e00; }
+.fmt-geojson { background: #e2d9f3; color: #432874; }
+.fmt-xml     { background: #fde2e2; color: #842029; }
+
+/* ---------------------------------------------------------------------------
+   Charts
+   --------------------------------------------------------------------------- */
+.chart-container {
+  position: relative;
+}
+
+/* ---------------------------------------------------------------------------
+   Map
+   --------------------------------------------------------------------------- */
+#mapContainer {
+  height: calc(100vh - 180px);
+  min-height: 400px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  overflow: hidden;
+}
+
+.leaflet-popup-content-wrapper {
+  font-size: 0.8rem;
+}
+.leaflet-popup-content p {
+  margin: .2em 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Log viewer
+   --------------------------------------------------------------------------- */
+.log-level-INFO    { color: #495057; }
+.log-level-WARNING { color: #e67e22; }
+.log-level-ERROR   { color: #dc3545; font-weight: 600; }
+.log-level-DEBUG   { color: #adb5bd; }
+
+.log-message {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: .78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-details-toggle {
+  font-size: .72rem;
+  cursor: pointer;
+  color: #6c757d;
+}
+.log-details-toggle:hover { color: #1a5c2a; }
+
+/* ---------------------------------------------------------------------------
+   Data Browser filters
+   --------------------------------------------------------------------------- */
+.filter-bar {
+  background: #f8fbf8;
+  border: 1px solid #e3e8e3;
+  border-radius: 6px;
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Topbar
+   --------------------------------------------------------------------------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1px solid #e3e8e3;
+  padding: .5rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.topbar-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a2e1f;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Cron expression display
+   --------------------------------------------------------------------------- */
+.cron-display {
+  font-family: monospace;
+  font-size: .82rem;
+  background: #f0f4f0;
+  padding: .15em .4em;
+  border-radius: 3px;
+  color: #1a5c2a;
+}
+
+/* ---------------------------------------------------------------------------
+   Empty state
+   --------------------------------------------------------------------------- */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #718096;
+}
+.empty-state i {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+  opacity: .4;
+}
+.empty-state h5 {
+  color: #4a5568;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive tweaks
+   --------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .stat-card .stat-value { font-size: 1.4rem; }
+  .topbar-title           { font-size: 0.9rem; }
+  #mapContainer           { height: 55vh; }
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbar (Webkit)
+   --------------------------------------------------------------------------- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f1; }
+::-webkit-scrollbar-thumb { background: #b7ceb7; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2d6a4f; }
+
+/* ---------------------------------------------------------------------------
+   Utilities
+   --------------------------------------------------------------------------- */
+.cursor-pointer { cursor: pointer; }
+.text-mono {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: .82em;
+}
+.opacity-60 { opacity: .6; }
+.border-success-light { border-color: #b7ceb7 !important; }

@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Data Browser{% endblock %}
+{% block page_title %}Data Browser{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2">
+  <a href="/data/map" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-map me-1"></i> Map View
+  </a>
+  <div class="dropdown">
+    <button class="btn btn-sm btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+      <i class="bi bi-download me-1"></i> Export
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="#" onclick="exportData('csv')">
+        <i class="bi bi-filetype-csv me-2"></i>CSV
+      </a></li>
+      <li><a class="dropdown-item" href="#" onclick="exportData('json')">
+        <i class="bi bi-filetype-json me-2"></i>JSON
+      </a></li>
+      <li><a class="dropdown-item" href="#" onclick="exportData('geojson')">
+        <i class="bi bi-geo-alt me-2"></i>GeoJSON (GPS records only)
+      </a></li>
+    </ul>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="filter-bar mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label mb-1">State</label>
+      <select class="form-select form-select-sm" id="filterState">
+        <option value="">All States</option>
+        {% for s in states %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label mb-1">Category</label>
+      <select class="form-select form-select-sm" id="filterCategory">
+        <option value="">All Categories</option>
+        {% for c in categories %}
+        <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label mb-1">Source</label>
+      <select class="form-select form-select-sm" id="filterSource">
+        <option value="">All Sources</option>
+        {% for src in sources %}
+        <option value="{{ src.id }}">[{{ src.state }}] {{ src.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label mb-1">Has GPS</label>
+      <select class="form-select form-select-sm" id="filterGps">
+        <option value="">Any</option>
+        <option value="1">GPS only</option>
+        <option value="0">No GPS</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" id="filterSearch"
+               placeholder="Name, license, city…">
+      </div>
+    </div>
+    <div class="col-md-1">
+      <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Result count -->
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <small class="text-muted" id="resultCount">Loading…</small>
+  <div class="d-flex align-items-center gap-2">
+    <label class="form-label mb-0 text-muted" style="font-size:.78rem;">Per page</label>
+    <select class="form-select form-select-sm" style="width:75px;" id="perPageSelect">
+      <option value="25">25</option>
+      <option value="50" selected>50</option>
+      <option value="100">100</option>
+      <option value="250">250</option>
+    </select>
+  </div>
+</div>
+
+<!-- Data Table -->
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm mb-0" id="dataTable">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>State</th>
+            <th>Category</th>
+            <th>License #</th>
+            <th>Status</th>
+            <th>City</th>
+            <th>Address</th>
+            <th>GPS</th>
+            <th>Phone</th>
+            <th>Collected</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dataTableBody">
+          <tr><td colspan="11" class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2"></div>Loading…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div id="paginationInfo" class="text-muted" style="font-size:.8rem;"></div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+  </nav>
+</div>
+
+<!-- Record Detail Modal -->
+<div class="modal fade" id="recordModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="recordModalTitle">Record Detail</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="recordModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-outline-secondary"
+                data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let totalPages  = 1;
+let totalCount  = 0;
+
+function getFilters() {
+  return {
+    state:    document.getElementById('filterState').value,
+    category: document.getElementById('filterCategory').value,
+    source_id: document.getElementById('filterSource').value,
+    has_gps:  document.getElementById('filterGps').value,
+    search:   document.getElementById('filterSearch').value,
+    page:     currentPage,
+    per_page: document.getElementById('perPageSelect').value,
+  };
+}
+
+function resetFilters() {
+  ['filterState','filterCategory','filterSource','filterGps'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('filterSearch').value = '';
+  currentPage = 1;
+  loadData();
+}
+
+async function loadData() {
+  const params = getFilters();
+  const qs = Object.entries(params)
+    .filter(([,v]) => v !== '')
+    .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+  const tbody = document.getElementById('dataTableBody');
+  tbody.innerHTML = `<tr><td colspan="11" class="text-center py-3">
+    <div class="spinner-border spinner-border-sm me-2"></div>Loading…</td></tr>`;
+
+  try {
+    const data = await apiGet('/api/records?' + qs);
+    totalCount = data.total;
+    totalPages = data.pages;
+    renderTable(data.records);
+    renderPagination(data.page, data.pages, data.total);
+    document.getElementById('resultCount').textContent =
+      `${fmtNumber(data.total)} records found`;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-3">
+      Error loading data: ${escHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderTable(records) {
+  const tbody = document.getElementById('dataTableBody');
+  if (!records || records.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11">
+      <div class="empty-state">
+        <i class="bi bi-database-x"></i>
+        <h5>No records found</h5>
+        <p class="mb-0">Try adjusting your filters or run a collection.</p>
+      </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = records.map(r => `
+    <tr>
+      <td>
+        <div class="fw-semibold" style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+             title="${escHtml(r.name)}">${escHtml(r.name) || '—'}</div>
+        ${r.license_type ? `<small class="text-muted">${escHtml(r.license_type)}</small>` : ''}
+      </td>
+      <td><span class="badge bg-secondary">${escHtml(r.state) || '—'}</span></td>
+      <td style="max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          title="${escHtml(r.category)}">${escHtml(r.category) || '—'}</td>
+      <td class="text-mono">${escHtml(r.license_number) || '—'}</td>
+      <td>${r.license_status ? `<span class="badge bg-light text-dark border">${escHtml(r.license_status)}</span>` : '—'}</td>
+      <td>${escHtml(r.city) || '—'}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          title="${escHtml(r.address)}">${escHtml(r.address) || '—'}</td>
+      <td>${r.latitude ? `<a href="https://www.google.com/maps?q=${r.latitude},${r.longitude}" target="_blank" rel="noopener" title="View on map: ${r.latitude}, ${r.longitude}"><i class="bi bi-geo-alt-fill text-success"></i></a>` : '<i class="bi bi-geo-alt text-muted opacity-30"></i>'}</td>
+      <td>${r.phone ? `<a href="tel:${escHtml(r.phone)}">${escHtml(r.phone)}</a>` : '—'}</td>
+      <td class="text-muted" style="white-space:nowrap;">${fmtDateRelative(r.collected_at)}</td>
+      <td>
+        <button class="btn btn-xs btn-outline-secondary" onclick="showRecord(${r.id})"
+                title="View full record"><i class="bi bi-eye"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPagination(page, pages, total) {
+  const ul = document.getElementById('pagination');
+  const info = document.getElementById('paginationInfo');
+  const perPage = parseInt(document.getElementById('perPageSelect').value);
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  info.textContent = `Showing ${fmtNumber(start)}–${fmtNumber(end)} of ${fmtNumber(total)}`;
+
+  let html = '';
+  const addBtn = (label, p, disabled = false, active = false) => {
+    html += `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}">
+      <a class="page-link" href="#" onclick="goToPage(${p});return false;">${label}</a></li>`;
+  };
+
+  addBtn('«', 1, page <= 1);
+  addBtn('‹', page - 1, page <= 1);
+
+  const range = pagRange(page, pages, 5);
+  for (const p of range) {
+    if (p === '...') html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+    else addBtn(p, p, false, p === page);
+  }
+
+  addBtn('›', page + 1, page >= pages);
+  addBtn('»', pages, page >= pages);
+
+  ul.innerHTML = html;
+}
+
+function pagRange(current, total, delta = 5) {
+  const range = [];
+  const left  = Math.max(2, current - delta);
+  const right = Math.min(total - 1, current + delta);
+  range.push(1);
+  if (left > 2) range.push('...');
+  for (let i = left; i <= right; i++) range.push(i);
+  if (right < total - 1) range.push('...');
+  if (total > 1) range.push(total);
+  return range;
+}
+
+function goToPage(p) {
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  loadData();
+  window.scrollTo(0, 0);
+}
+
+async function showRecord(id) {
+  const modal = new bootstrap.Modal(document.getElementById('recordModal'));
+  document.getElementById('recordModalTitle').textContent = 'Loading…';
+  document.getElementById('recordModalBody').innerHTML =
+    '<div class="text-center py-3"><div class="spinner-border"></div></div>';
+  modal.show();
+  try {
+    const r = await apiGet(`/api/records/${id}`);
+    document.getElementById('recordModalTitle').textContent = r.name || `Record #${id}`;
+    document.getElementById('recordModalBody').innerHTML = renderRecordDetail(r);
+  } catch (err) {
+    document.getElementById('recordModalBody').innerHTML =
+      `<p class="text-danger">Failed to load record: ${escHtml(err.message)}</p>`;
+  }
+}
+
+function renderRecordDetail(r) {
+  const field = (label, value) => {
+    if (!value && value !== 0) return '';
+    return `<tr><th style="width:35%;">${escHtml(label)}</th>
+      <td>${escHtml(String(value))}</td></tr>`;
+  };
+  let html = `
+    <h6 class="text-muted mb-2" style="font-size:.75rem;">Standard Fields</h6>
+    <table class="table table-sm table-bordered mb-3">
+      <tbody>
+        ${field('Name', r.name)}
+        ${field('State', r.state)}
+        ${field('Category', r.category)}
+        ${field('Subcategory', r.subcategory)}
+        ${field('License Number', r.license_number)}
+        ${field('License Type', r.license_type)}
+        ${field('License Status', r.license_status)}
+        ${field('Address', r.address)}
+        ${field('City', r.city)}
+        ${field('ZIP Code', r.zip_code)}
+        ${field('County', r.county)}
+        ${field('Latitude', r.latitude)}
+        ${field('Longitude', r.longitude)}
+        ${field('Phone', r.phone)}
+        ${field('Email', r.email)}
+        ${field('Website', r.website ? `<a href="${escHtml(r.website)}" target="_blank">${escHtml(r.website)}</a>` : null)}
+        ${field('Record Date', r.record_date)}
+        ${field('License Date', r.license_date)}
+        ${field('Expiry Date', r.expiry_date)}
+        ${field('Collected At', fmtDate(r.collected_at))}
+      </tbody>
+    </table>`;
+
+  if (r.record_data && Object.keys(r.record_data).length) {
+    html += `<h6 class="text-muted mb-2" style="font-size:.75rem;">Raw Source Data</h6>
+      <pre class="bg-light p-2 rounded" style="font-size:.72rem;max-height:300px;overflow:auto;">${
+        escHtml(JSON.stringify(r.record_data, null, 2))
+      }</pre>`;
+  }
+  return html;
+}
+
+async function exportData(fmt) {
+  const params = getFilters();
+  params.format = fmt;
+  params.page = 1;
+  params.per_page = 10000;
+  const qs = Object.entries(params)
+    .filter(([,v]) => v !== '')
+    .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  triggerDownload(`/api/records/export?${qs}`, `cannabis_data.${fmt}`);
+}
+
+// Filter change handlers
+const debouncedLoad = debounce(loadData, 400);
+['filterState','filterCategory','filterSource','filterGps'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { currentPage = 1; loadData(); });
+});
+document.getElementById('filterSearch').addEventListener('input', () => { currentPage = 1; debouncedLoad(); });
+document.getElementById('perPageSelect').addEventListener('change', () => { currentPage = 1; loadData(); });
+
+// Initial load
+loadData();
+</script>
+{% endblock %}

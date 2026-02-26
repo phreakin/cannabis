@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}500 Server Error{% endblock %}
+{% block page_title %}Server Error{% endblock %}
+{% block content %}
+<div class="empty-state mt-5">
+  <i class="bi bi-exclamation-triangle"></i>
+  <h2>500 — Internal Server Error</h2>
+  <p>Something went wrong. Check the logs for details.</p>
+  <a href="/" class="btn btn-primary">Back to Dashboard</a>
+  <a href="/logs" class="btn btn-outline-secondary ms-2">View Logs</a>
+</div>
+{% endblock %}

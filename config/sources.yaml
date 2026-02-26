@@ -1,0 +1,1378 @@
+# =============================================================================
+# Cannabis Data Aggregator - Data Sources Configuration
+# =============================================================================
+# Each source defines a single dataset endpoint to collect from.
+#
+# Fields:
+#   id            - Unique slug identifier (no spaces, use underscores)
+#   name          - Human-readable name
+#   state         - Two-letter state code or FEDERAL
+#   agency        - Responsible agency/department
+#   category      - Data category (see settings.yaml for valid values)
+#   subcategory   - Optional subcategory
+#   format        - Data format: soda, json, csv, geojson, xml
+#   url           - Direct API/download endpoint
+#   discovery_url - Where to find/verify this dataset
+#   enabled       - Whether to collect this source (true/false)
+#   api_key_required - Whether an API key is needed
+#   api_key_env   - Environment variable name for the API key
+#   params        - Default query parameters (key: value)
+#   headers       - Custom HTTP headers
+#   pagination    - Pagination configuration
+#   field_mapping - Map source field names to standard field names
+#   tags          - List of tags for filtering
+#   notes         - Notes about this source
+#   website       - Official agency/program website
+# =============================================================================
+
+# =============================================================================
+# FEDERAL SOURCES
+# =============================================================================
+sources:
+
+  # ---------------------------------------------------------------------------
+  # USDA Agricultural Marketing Service - Hemp Licensing
+  # ---------------------------------------------------------------------------
+  - id: usda_hemp_producers
+    name: "USDA AMS - Licensed Hemp Producers"
+    state: FEDERAL
+    agency: "USDA Agricultural Marketing Service (AMS)"
+    category: licenses
+    subcategory: hemp_producers
+    format: csv
+    url: "https://apps.ams.usda.gov/pub/fndApps/ScraperService/export/hemp.csv"
+    discovery_url: "https://www.ams.usda.gov/rules-regulations/hemp/state-and-tribal-plan-information"
+    enabled: true
+    api_key_required: false
+    pagination:
+      type: none
+    field_mapping:
+      name: "Producer Name"
+      address: "Address"
+      city: "City"
+      state: "State"
+      zip_code: "Zip"
+      county: "County"
+      license_number: "License Number"
+      license_status: "License Status"
+      license_date: "License Date"
+      expiry_date: "License Expiration"
+    tags: [federal, hemp, producers, licenses, usda]
+    notes: "USDA national hemp producer database. Updates periodically."
+    website: "https://www.ams.usda.gov/rules-regulations/hemp"
+
+  # ---------------------------------------------------------------------------
+  # DEA - Controlled Substance Registrants (limited public data)
+  # ---------------------------------------------------------------------------
+  - id: dea_registrants
+    name: "DEA - Controlled Substance Registrants (Cannabis Research)"
+    state: FEDERAL
+    agency: "Drug Enforcement Administration (DEA)"
+    category: licenses
+    subcategory: dea_registrants
+    format: json
+    url: "https://www.deadiversion.usdoj.gov/webforms/HandlerExternalApp.do"
+    discovery_url: "https://www.deadiversion.usdoj.gov/drugreg/"
+    enabled: false
+    api_key_required: false
+    tags: [federal, dea, research, controlled_substances]
+    notes: "DEA registrant lookup - limited public API. Enable with custom scraper if needed."
+    website: "https://www.deadiversion.usdoj.gov"
+
+  # ---------------------------------------------------------------------------
+  # Congress.gov - Cannabis Legislation (Congress.gov API v3)
+  # ---------------------------------------------------------------------------
+  - id: congress_cannabis_bills
+    name: "US Congress - Cannabis-Related Bills"
+    state: FEDERAL
+    agency: "US Congress / Congress.gov API"
+    category: laws
+    subcategory: federal_legislation
+    format: json
+    url: "https://api.congress.gov/v3/bill"
+    discovery_url: "https://www.congress.gov/search?q=%7B%22source%22%3A%22legislation%22%2C%22search%22%3A%22cannabis%22%7D"
+    enabled: true
+    api_key_required: true
+    api_key_env: CONGRESS_API_KEY
+    params:
+      query: "cannabis marijuana"
+      sort: "updateDate+desc"
+      format: "json"
+      limit: 250
+    pagination:
+      type: offset
+      offset_param: "offset"
+      page_size: 250
+    field_mapping:
+      title: "title"
+      bill_number: "number"
+      bill_type: "type"
+      congress: "congress"
+      origin_chamber: "originChamber"
+      latest_action: "latestAction.text"
+      latest_action_date: "latestAction.actionDate"
+      url: "url"
+      update_date: "updateDate"
+    tags: [federal, congress, legislation, bills, laws, cannabis]
+    notes: "Congress.gov API v3 — uses CONGRESS_API_KEY from .env. Free key at api.congress.gov. Previously pointed to ProPublica (wrong service)."
+    website: "https://www.congress.gov"
+
+  # ---------------------------------------------------------------------------
+  # FDA - Cannabis Drug Product Data
+  # ---------------------------------------------------------------------------
+  - id: fda_cannabis_products
+    name: "FDA - Cannabis/CBD Related Drug Products"
+    state: FEDERAL
+    agency: "Food and Drug Administration (FDA)"
+    category: products
+    subcategory: drug_products
+    format: json
+    url: "https://api.fda.gov/drug/ndc.json"
+    discovery_url: "https://open.fda.gov/apis/drug/"
+    enabled: false
+    api_key_required: false
+    api_key_env: FDA_API_KEY
+    params:
+      search: 'brand_name:"cannabis" OR substance_name:"cannabidiol"'
+      limit: 1000
+    pagination:
+      type: offset
+      offset_param: "skip"
+      limit_param: "limit"
+      page_size: 1000
+    tags: [federal, fda, products, cbd, drug_products]
+    notes: "FDA open data API for drug products. Free API key increases rate limits."
+    website: "https://open.fda.gov"
+
+# =============================================================================
+# COLORADO
+# =============================================================================
+
+  - id: co_med_licensees
+    name: "Colorado MED - Licensed Facilities"
+    state: CO
+    agency: "Marijuana Enforcement Division (MED)"
+    category: licenses
+    subcategory: all_facility_types
+    format: soda
+    url: "https://data.colorado.gov/resource/93ae-ftjz.json"
+    discovery_url: "https://data.colorado.gov/dataset/Licensed-Marijuana-Businesses-in-Colorado/93ae-ftjz"
+    enabled: false
+    api_key_required: false
+    api_key_env: CO_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "licensename"
+      license_number: "licensenumber"
+      license_type: "licensetype"
+      license_status: "licensestatus"
+      address: "physicaladdress"
+      city: "physicalcity"
+      state: "physicalstate"
+      zip_code: "physicalzip"
+      county: "county"
+      latitude: "latitude"
+      longitude: "longitude"
+      license_date: "licenseissuedate"
+      expiry_date: "licenseexpirationdate"
+    tags: [colorado, co, med, licenses, dispensaries, cultivators]
+    notes: "DISABLED: 93ae-ftjz is a non-tabular href (Tableau Dashboard link), not a queryable Socrata dataset. Returns 403. Actual data at sbg.colorado.gov/med/regulated-marijuana-reports (PDF/Excel reports only)."
+    website: "https://sbg.colorado.gov/med"
+
+  - id: co_med_sales_monthly
+    name: "Colorado MED - Retail Marijuana Sales (Monthly)"
+    state: CO
+    agency: "Marijuana Enforcement Division (MED)"
+    category: sales
+    subcategory: retail_monthly
+    format: soda
+    url: "https://data.colorado.gov/resource/j7a3-jgd3.json"
+    discovery_url: "https://data.colorado.gov/browse?q=marijuana+sales"
+    enabled: true
+    api_key_required: false
+    api_key_env: CO_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+      $order: "year DESC"
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      period_year: "year"
+      period_month: "month"
+      county: "county"
+      medical_sales: "med_sales"
+      recreational_sales: "rec_sales"
+    tags: [colorado, co, sales, revenue, monthly, med]
+    notes: "Statewide monthly marijuana sales by county. Fields: year, month, county, med_sales, rec_sales."
+    website: "https://sbg.colorado.gov/med"
+
+  - id: co_med_avg_market_rates
+    name: "Colorado MED - Average Market Rates (Cannabis Prices)"
+    state: CO
+    agency: "Marijuana Enforcement Division (MED)"
+    category: sales
+    subcategory: market_rates
+    format: soda
+    url: "https://data.colorado.gov/resource/nwk5-k6zy.json"
+    discovery_url: "https://data.colorado.gov/browse?q=marijuana+market+rate"
+    enabled: false
+    api_key_required: false
+    api_key_env: CO_APP_TOKEN
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [colorado, co, prices, market_rates, med]
+    notes: "DISABLED — dataset nwk5-k6zy is 404. No confirmed replacement found on data.colorado.gov."
+    website: "https://sbg.colorado.gov/med"
+
+# =============================================================================
+# WASHINGTON STATE
+# =============================================================================
+
+  - id: wa_wslcb_licensees
+    name: "Washington WSLCB - Cannabis Licensees"
+    state: WA
+    agency: "Washington State Liquor and Cannabis Board (WSLCB)"
+    category: licenses
+    subcategory: all_licensees
+    format: soda
+    url: "https://data.lcb.wa.gov/resource/bhbp-x4eb.json"
+    discovery_url: "https://data.lcb.wa.gov/browse?tags=cannabis"
+    enabled: true
+    api_key_required: false
+    api_key_env: WA_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "tradename"
+      license_number: "ubi"
+      license_type: "privilege"
+      license_status: "status"
+      address: "street_address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+      county: "county"
+      latitude: "coordinates.latitude"
+      longitude: "coordinates.longitude"
+      license_date: "issueddate"
+      expiry_date: "expirationdate"
+      phone: "phone"
+      email: "email"
+    tags: [washington, wa, wslcb, licenses, dispensaries, producers]
+    notes: "WSLCB cannabis license data including retailers, producers, processors."
+    website: "https://lcb.wa.gov"
+
+  - id: wa_wslcb_violations
+    name: "Washington WSLCB - Cannabis Enforcement Violations"
+    state: WA
+    agency: "Washington State Liquor and Cannabis Board (WSLCB)"
+    category: violations
+    subcategory: enforcement
+    format: soda
+    url: "https://data.lcb.wa.gov/resource/m5k2-s78r.json"
+    discovery_url: "https://data.lcb.wa.gov/browse?tags=violations"
+    enabled: true
+    api_key_required: false
+    api_key_env: WA_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [washington, wa, wslcb, violations, enforcement]
+    notes: "WSLCB enforcement violation records for cannabis licensees."
+    website: "https://lcb.wa.gov"
+
+  - id: wa_wslcb_sales_data
+    name: "Washington WSLCB - Cannabis Sales Data"
+    state: WA
+    agency: "Washington State Liquor and Cannabis Board (WSLCB)"
+    category: sales
+    subcategory: retail_sales
+    format: soda
+    url: "https://data.lcb.wa.gov/resource/7ser-y2pt.json"
+    discovery_url: "https://data.lcb.wa.gov/browse?q=marijuana+sales"
+    enabled: true
+    api_key_required: false
+    api_key_env: WA_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [washington, wa, wslcb, sales, revenue]
+    notes: "WSLCB cannabis sales and excise tax data."
+    website: "https://lcb.wa.gov"
+
+# =============================================================================
+# OREGON
+# =============================================================================
+
+  - id: or_olcc_licensees
+    name: "Oregon OLCC - Cannabis Licensees"
+    state: OR
+    agency: "Oregon Liquor and Cannabis Commission (OLCC)"
+    category: licenses
+    subcategory: all_licensees
+    format: soda
+    url: "https://data.oregon.gov/resource/fdkf-btv3.json"
+    discovery_url: "https://data.oregon.gov/browse?q=marijuana&tags=olcc"
+    enabled: false
+    api_key_required: false
+    api_key_env: OR_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "license_name"
+      license_number: "license_number"
+      license_type: "license_type"
+      license_status: "license_status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip_code"
+      county: "county"
+      latitude: "location.latitude"
+      longitude: "location.longitude"
+      license_date: "effective_date"
+      expiry_date: "expiration_date"
+    tags: [oregon, or, olcc, licenses, dispensaries, growers]
+    notes: "Oregon OLCC cannabis licensees - retailers, growers, processors, wholesalers."
+    website: "https://www.oregon.gov/olcc"
+
+  - id: or_olcc_dispensary_locations
+    name: "Oregon OLCC - Licensed Dispensary Locations (GeoJSON)"
+    state: OR
+    agency: "Oregon Liquor and Cannabis Commission (OLCC)"
+    category: dispensaries
+    subcategory: retail_locations
+    format: geojson
+    url: "https://data.oregon.gov/api/geospatial/fdkf-btv3?method=export&type=GeoJSON&where=license_type=%27Retailer%27"
+    discovery_url: "https://data.oregon.gov/browse?q=dispensary+location"
+    enabled: false
+    api_key_required: false
+    api_key_env: OR_APP_TOKEN
+    field_mapping:
+      name: "license_name"
+      address: "address"
+      city: "city"
+      zip_code: "zip_code"
+      latitude: "_latitude"
+      longitude: "_longitude"
+    tags: [oregon, or, dispensaries, locations, geojson, map]
+    notes: "DISABLED — same dataset as or_olcc_licensees (fdkf-btv3), which is 404. Re-enable when OLCC publishes a Socrata replacement."
+    website: "https://www.oregon.gov/olcc"
+
+# =============================================================================
+# CALIFORNIA
+# =============================================================================
+
+  - id: ca_dcc_licensees
+    name: "California DCC - Cannabis Licensees"
+    state: CA
+    agency: "Department of Cannabis Control (DCC)"
+    category: licenses
+    subcategory: all_licensees
+    format: csv
+    url: "https://as-dl.dcc.ca.gov/api/export/csv/3"
+    discovery_url: "https://cannabis.ca.gov/resources/search-for-licensed-cannabis-businesses/"
+    enabled: true
+    api_key_required: false
+    pagination:
+      type: none
+    field_mapping:
+      name: "Business_DBA_Name"
+      license_number: "License_Number"
+      license_type: "License_Type"
+      license_status: "License_Status"
+      address: "Premise_Address_1"
+      city: "Premise_City"
+      state: "Premise_State"
+      zip_code: "Premise_Zip"
+      county: "Premise_County"
+      latitude: "premise_latitude"
+      longitude: "premise_longitude"
+      license_date: "Issue_Date"
+      expiry_date: "Expiration_Date"
+      owner_name: "Business_Owner_Firstname"
+      entity_type: "Entity_Type"
+    tags: [california, ca, dcc, licenses, dispensaries, cultivators]
+    notes: "CA DCC full licensee CSV export. Very comprehensive dataset."
+    website: "https://cannabis.ca.gov"
+
+  - id: ca_dcc_licensees_json
+    name: "California DCC - Cannabis Licensees (JSON API)"
+    state: CA
+    agency: "Department of Cannabis Control (DCC)"
+    category: licenses
+    subcategory: all_licensees
+    format: json
+    url: "https://as-dl.dcc.ca.gov/api/export/json/3"
+    discovery_url: "https://cannabis.ca.gov/resources/search-for-licensed-cannabis-businesses/"
+    enabled: false  # prefer CSV version
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [california, ca, dcc, licenses]
+    notes: "JSON alternative to CSV version. Both cover same data."
+    website: "https://cannabis.ca.gov"
+
+# =============================================================================
+# OKLAHOMA
+# =============================================================================
+
+  - id: ok_omma_dispensaries
+    name: "Oklahoma OMMA - Licensed Dispensaries"
+    state: OK
+    agency: "Oklahoma Medical Marijuana Authority (OMMA)"
+    category: dispensaries
+    subcategory: retail
+    format: soda
+    url: "https://data.ok.gov/resource/aqkm-eu3v.json"
+    discovery_url: "https://ommaverify.ok.gov"
+    enabled: false
+    api_key_required: false
+    api_key_env: OK_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "business_name"
+      license_number: "license_no"
+      license_status: "license_status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+      county: "county"
+      latitude: "location.latitude"
+      longitude: "location.longitude"
+      phone: "phone"
+      website: "website"
+    tags: [oklahoma, ok, omma, dispensaries, medical, locations]
+    notes: "DISABLED — OMMA moved all data to ommaverify.ok.gov which has no public API. No Socrata replacement found."
+    website: "https://omma.ok.gov"
+
+  - id: ok_omma_growers
+    name: "Oklahoma OMMA - Licensed Growers"
+    state: OK
+    agency: "Oklahoma Medical Marijuana Authority (OMMA)"
+    category: cultivators
+    subcategory: licensed_growers
+    format: soda
+    url: "https://data.ok.gov/resource/gx9m-3snf.json"
+    discovery_url: "https://ommaverify.ok.gov"
+    enabled: false
+    api_key_required: false
+    api_key_env: OK_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "business_name"
+      license_number: "license_no"
+      license_status: "license_status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+      county: "county"
+      latitude: "location.latitude"
+      longitude: "location.longitude"
+    tags: [oklahoma, ok, omma, cultivators, growers, medical]
+    notes: "DISABLED — OMMA moved to ommaverify.ok.gov, no public API."
+    website: "https://omma.ok.gov"
+
+  - id: ok_omma_processors
+    name: "Oklahoma OMMA - Licensed Processors"
+    state: OK
+    agency: "Oklahoma Medical Marijuana Authority (OMMA)"
+    category: processors
+    subcategory: licensed_processors
+    format: soda
+    url: "https://data.ok.gov/resource/r7i6-5fns.json"
+    discovery_url: "https://ommaverify.ok.gov"
+    enabled: false
+    api_key_required: false
+    api_key_env: OK_APP_TOKEN
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [oklahoma, ok, omma, processors, medical]
+    notes: "DISABLED — OMMA moved to ommaverify.ok.gov, no public API."
+    website: "https://omma.ok.gov"
+
+  - id: ok_omma_transporter_licenses
+    name: "Oklahoma OMMA - Licensed Transporters"
+    state: OK
+    agency: "Oklahoma Medical Marijuana Authority (OMMA)"
+    category: transporters
+    subcategory: licensed_transporters
+    format: soda
+    url: "https://data.ok.gov/resource/v4u5-p6ij.json"
+    discovery_url: "https://ommaverify.ok.gov"
+    enabled: false
+    api_key_required: false
+    api_key_env: OK_APP_TOKEN
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [oklahoma, ok, omma, transporters, medical]
+    notes: "DISABLED — OMMA moved to ommaverify.ok.gov, no public API."
+    website: "https://omma.ok.gov"
+
+# =============================================================================
+# NEVADA
+# =============================================================================
+
+  - id: nv_ccb_dispensaries
+    name: "Nevada CCB - Cannabis Dispensary Licenses"
+    state: NV
+    agency: "Cannabis Compliance Board (CCB)"
+    category: dispensaries
+    subcategory: retail
+    format: csv
+    url: "https://ccb.nv.gov/wp-content/uploads/2023/01/Active-Licenses-All.csv"
+    discovery_url: "https://ccb.nv.gov/license-search/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    field_mapping:
+      name: "DBA"
+      license_number: "License Number"
+      license_type: "License Type"
+      license_status: "Status"
+      address: "Address"
+      city: "City"
+      state: "State"
+      zip_code: "ZIP"
+      county: "County"
+      license_date: "Issue Date"
+      expiry_date: "Expiration Date"
+    tags: [nevada, nv, ccb, dispensaries, licenses]
+    notes: "DISABLED — CCB offers license search only (ccb.nv.gov/license-search/), no bulk CSV download. Requires public records request for full dataset."
+    website: "https://ccb.nv.gov"
+
+# =============================================================================
+# ILLINOIS
+# =============================================================================
+
+  - id: il_idfpr_cannabis_licenses
+    name: "Illinois IDFPR - Cannabis Business Licenses"
+    state: IL
+    agency: "Illinois Department of Financial and Professional Regulation (IDFPR)"
+    category: licenses
+    subcategory: cannabis_businesses
+    format: soda
+    url: "https://data.illinois.gov/resource/cdej-yvyv.json"
+    discovery_url: "https://www.idfpr.illinois.gov/profs/CannBusLic.asp"
+    enabled: false
+    api_key_required: false
+    api_key_env: IL_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "business_name"
+      license_number: "license_number"
+      license_type: "license_type"
+      license_status: "license_status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+      county: "county"
+    tags: [illinois, il, idfpr, licenses, dispensaries, cultivators]
+    notes: "DISABLED — Socrata dataset cdej-yvyv is 404. IDFPR moved to PDF-only reports at idfpr.illinois.gov. No structured API available."
+    website: "https://www.idfpr.illinois.gov"
+
+  - id: il_cannabis_monthly_sales
+    name: "Illinois - Adult Use Cannabis Monthly Sales"
+    state: IL
+    agency: "Illinois Department of Revenue / DCEO"
+    category: sales
+    subcategory: adult_use_monthly
+    format: csv
+    url: "https://www2.illinois.gov/sites/revenue/DataAndStatistics/Documents/Cannabis%20Monthly%20Revenue.xlsx"
+    discovery_url: "https://tax.illinois.gov/research/taxstats/cannabis-tax-statistics.html"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [illinois, il, sales, revenue, adult_use, monthly]
+    notes: "DISABLED — illinois.gov URL restructured; Excel file moved. Check tax.illinois.gov/research/taxstats/cannabis-tax-statistics.html for current download link."
+    website: "https://tax.illinois.gov"
+
+# =============================================================================
+# MASSACHUSETTS
+# =============================================================================
+
+  - id: ma_ccc_licensees
+    name: "Massachusetts CCC - Cannabis Licensees"
+    state: MA
+    agency: "Cannabis Control Commission (CCC)"
+    category: licenses
+    subcategory: all_licensees
+    format: soda
+    url: "https://masscannabiscontrol.com/resource/hmwt-yiqy.json"
+    discovery_url: "https://masscannabiscontrol.com/open-data/data-catalog/"
+    enabled: true
+    api_key_required: false
+    api_key_env: MA_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "BUSINESS_NAME"
+      license_number: "LICENSE_NUMBER"
+      license_type: "LICENSE_TYPE"
+      license_status: "LIC_STATUS"
+      address: "ADDRESS_1"
+      city: "CITY"
+      state: "STATE"
+      zip_code: "ZIP_CODE"
+      county: "county"
+      latitude: "latitude"
+      longitude: "longitude"
+      license_date: "LIC_START_DATE"
+      expiry_date: "LIC_EXPIRATION_DATE"
+      email: "BUSINESS_EMAIL"
+      phone: "BUSINESS_PHONE"
+    tags: [massachusetts, ma, ccc, licenses, dispensaries, cultivators]
+    notes: "Massachusetts CCC licensee database. Moved from data.mass.gov to masscannabiscontrol.com (dataset hmwt-yiqy)."
+    website: "https://masscannabiscontrol.com"
+
+  - id: ma_ccc_weekly_sales
+    name: "Massachusetts CCC - Weekly Cannabis Sales"
+    state: MA
+    agency: "Cannabis Control Commission (CCC)"
+    category: sales
+    subcategory: weekly_sales
+    format: soda
+    url: "https://masscannabiscontrol.com/resource/dt9b-i6ds.json"
+    discovery_url: "https://masscannabiscontrol.com/open-data/data-catalog/"
+    enabled: true
+    api_key_required: false
+    api_key_env: MA_APP_TOKEN
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [massachusetts, ma, ccc, sales, weekly]
+    notes: "Massachusetts weekly cannabis sales data. Moved from data.mass.gov to masscannabiscontrol.com (dataset dt9b-i6ds)."
+    website: "https://masscannabiscontrol.com"
+
+# =============================================================================
+# MICHIGAN
+# =============================================================================
+
+  - id: mi_cra_licenses
+    name: "Michigan CRA - Cannabis Licensees"
+    state: MI
+    agency: "Cannabis Regulatory Agency (CRA)"
+    category: licenses
+    subcategory: all_licensees
+    format: csv
+    url: "https://www.michigan.gov/cra/0,9306,7-386-83028_85926---,00.html"
+    discovery_url: "https://www.michigan.gov/cra/licensee-resources/licensee-resources"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [michigan, mi, cra, licenses, dispensaries]
+    notes: "DISABLED — URL returns HTML page (403 on direct fetch). CRA publishes Excel files but direct download URL changes. Check michigan.gov/cra/licensee-resources for current link."
+    website: "https://www.michigan.gov/cra"
+
+  - id: mi_cra_marijuana_sales
+    name: "Michigan CRA - Monthly Marijuana Sales Reports"
+    state: MI
+    agency: "Cannabis Regulatory Agency (CRA)"
+    category: sales
+    subcategory: monthly_sales
+    format: csv
+    url: "https://www.michigan.gov/cra/0,9306,7-386-83028_85926_80143---,00.html"
+    discovery_url: "https://www.michigan.gov/cra/data-reports"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [michigan, mi, cra, sales, monthly]
+    notes: "Michigan monthly sales reports - may require web scraping for download links."
+    website: "https://www.michigan.gov/cra"
+
+# =============================================================================
+# ALASKA
+# =============================================================================
+
+  - id: ak_amco_licenses
+    name: "Alaska AMCO - Marijuana License Database"
+    state: AK
+    agency: "Alcohol and Marijuana Control Office (AMCO)"
+    category: licenses
+    subcategory: all_licensees
+    format: csv
+    url: "https://www.commerce.alaska.gov/cbp/DBDownloads/MARLicenseDownload.CSV"
+    discovery_url: "https://www.commerce.alaska.gov/web/amco/MarijuanaRegistrations.aspx"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    field_mapping:
+      name: "Licensee"
+      license_number: "License Number"
+      license_type: "License Type"
+      address: "Street"
+      city: "City"
+      state: "State"
+      zip_code: "ZIP"
+      county: "Borough"
+      license_status: "Status"
+      license_date: "Issued"
+      expiry_date: "Expires"
+    tags: [alaska, ak, amco, licenses, dispensaries]
+    notes: "DISABLED — CSV URL returns 404. AMCO moved to AK-ACCIS (accis.alaska.gov) system. No direct bulk download available."
+    website: "https://www.commerce.alaska.gov/web/amco"
+
+# =============================================================================
+# ARIZONA
+# =============================================================================
+
+  - id: az_adhs_dispensaries
+    name: "Arizona ADHS - Licensed Dispensaries"
+    state: AZ
+    agency: "Arizona Department of Health Services (ADHS)"
+    category: dispensaries
+    subcategory: medical_dispensaries
+    format: json
+    url: "https://azdhs.gov/audiences/individuals/behavioral-health/medical-marijuana/index.php#dispensary-agent"
+    discovery_url: "https://azdhs.gov/licensing/medical-marijuana/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [arizona, az, adhs, dispensaries, medical]
+    notes: "Arizona ADHS - check for Socrata or direct CSV/JSON endpoint. May need custom collector."
+    website: "https://azdhs.gov/licensing/medical-marijuana/"
+
+# =============================================================================
+# NEW MEXICO
+# =============================================================================
+
+  - id: nm_rld_cannabis_licenses
+    name: "New Mexico RLD - Cannabis Licenses"
+    state: NM
+    agency: "New Mexico Regulation and Licensing Department (RLD)"
+    category: licenses
+    subcategory: cannabis_licenses
+    format: soda
+    url: "https://data.nm.gov/resource/d3p6-s527.json"
+    discovery_url: "https://data.nm.gov/browse?q=cannabis"
+    enabled: true
+    api_key_required: false
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "licensee_name"
+      license_number: "license_number"
+      license_type: "license_type"
+      license_status: "license_status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+      county: "county"
+    tags: [new_mexico, nm, rld, licenses, dispensaries, cannabis]
+    notes: "New Mexico cannabis (adult use and medical) license data."
+    website: "https://www.rld.nm.gov/cannabis/"
+
+# =============================================================================
+# MONTANA
+# =============================================================================
+
+  - id: mt_cannabis_control_licenses
+    name: "Montana Cannabis Control Division - Licenses"
+    state: MT
+    agency: "Montana Cannabis Control Division"
+    category: licenses
+    subcategory: cannabis_licenses
+    format: csv
+    url: "https://cannabis.mt.gov/Licensees"
+    discovery_url: "https://cannabis.mt.gov/Resources/data"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [montana, mt, cannabis, licenses]
+    notes: "Montana cannabis license data. Check for direct CSV download URL."
+    website: "https://cannabis.mt.gov"
+
+# =============================================================================
+# MAINE
+# =============================================================================
+
+  - id: me_omoc_licenses
+    name: "Maine OMOC - Medical & Adult Use Cannabis Licenses"
+    state: ME
+    agency: "Office of Marijuana Policy (OMP)"
+    category: licenses
+    subcategory: cannabis_licenses
+    format: csv
+    url: "https://www.maine.gov/dafs/bablo/medicinal-use-marijuana/licensed-dispensaries"
+    discovery_url: "https://www.maine.gov/dafs/bablo/adult-use-marijuana"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [maine, me, omp, licenses, dispensaries, medical, adult_use]
+    notes: "Maine OMP cannabis license data. May require custom scraper."
+    website: "https://www.maine.gov/dafs/bablo"
+
+# =============================================================================
+# CONNECTICUT
+# =============================================================================
+
+  - id: ct_dcp_cannabis_licenses
+    name: "Connecticut DCP - Cannabis Establishments"
+    state: CT
+    agency: "Department of Consumer Protection (DCP)"
+    category: licenses
+    subcategory: cannabis_licenses
+    format: soda
+    url: "https://data.ct.gov/resource/u8mw-sv7k.json"
+    discovery_url: "https://data.ct.gov/dataset/Cannabis-Establishments/u8mw-sv7k"
+    enabled: true
+    api_key_required: false
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "business_name"
+      license_number: "license_number"
+      license_type: "license_type"
+      license_status: "status"
+      address: "address"
+      city: "city"
+      state: "state"
+      zip_code: "zip"
+    tags: [connecticut, ct, dcp, licenses, dispensaries]
+    notes: "Connecticut DCP cannabis establishments. Updated from s4hw-z9qa (404) to u8mw-sv7k."
+    website: "https://portal.ct.gov/DCP/Business-Services-Division"
+
+# =============================================================================
+# NEW JERSEY
+# =============================================================================
+
+  - id: nj_crc_licenses
+    name: "New Jersey CRC - Cannabis Business Licenses"
+    state: NJ
+    agency: "New Jersey Cannabis Regulatory Commission (CRC)"
+    category: licenses
+    subcategory: cannabis_businesses
+    format: csv
+    url: "https://data.nj.gov/api/views/p3ry-ipye/rows.csv"
+    discovery_url: "https://www.nj.gov/cannabis/resources/reports-stats-info/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    field_mapping:
+      name: "Business Name"
+      license_number: "License Number"
+      license_type: "License Type"
+      license_status: "License Status"
+      address: "Premises Address"
+      city: "City"
+      state: "State"
+      zip_code: "Zip Code"
+      county: "County"
+    tags: [new_jersey, nj, crc, licenses, dispensaries]
+    notes: "DISABLED — dataset p3ry-ipye is 404; no replacement found on data.nj.gov. CRC publishes quarterly PDFs at nj.gov/cannabis/resources/reports-stats-info/."
+    website: "https://www.nj.gov/cannabis"
+
+# =============================================================================
+# NEW YORK
+# =============================================================================
+
+  - id: ny_ocm_dispensaries
+    name: "New York OCM - Current Cannabis Licenses"
+    state: NY
+    agency: "Office of Cannabis Management (OCM)"
+    category: licenses
+    subcategory: all_licenses
+    format: soda
+    url: "https://data.ny.gov/resource/jskf-tt3q.json"
+    discovery_url: "https://data.ny.gov/Government-Finance/Current-OCM-Licenses/jskf-tt3q"
+    enabled: true
+    api_key_required: false
+    params:
+      $limit: 5000
+      $offset: 0
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "entity_name"
+      dba: "dba"
+      license_number: "license_number"
+      license_type: "license_type"
+      license_status: "license_status"
+      address: "address_line_1"
+      city: "city"
+      state: "state"
+      zip_code: "zip_code"
+      county: "county"
+      license_date: "issued_date"
+      expiry_date: "expiration_date"
+    tags: [new_york, ny, ocm, licenses, dispensaries, adult_use]
+    notes: "New York OCM all current cannabis licenses. Updated from jnjj-8g3g (404) to jskf-tt3q (Current OCM Licenses)."
+    website: "https://cannabis.ny.gov"
+
+  - id: ny_ocm_all_licenses
+    name: "New York OCM - All Cannabis Licenses (legacy)"
+    state: NY
+    agency: "Office of Cannabis Management (OCM)"
+    category: licenses
+    subcategory: all_licenses
+    format: soda
+    url: "https://data.ny.gov/resource/yq4v-k4kz.json"
+    discovery_url: "https://data.ny.gov/browse?q=cannabis"
+    enabled: false
+    api_key_required: false
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    tags: [new_york, ny, ocm, licenses, cannabis]
+    notes: "DISABLED — dataset yq4v-k4kz is 404. Use ny_ocm_dispensaries (jskf-tt3q) instead."
+    website: "https://cannabis.ny.gov"
+
+# =============================================================================
+# MARYLAND
+# =============================================================================
+
+  - id: md_mca_licenses
+    name: "Maryland MCA - Cannabis Business Licenses"
+    state: MD
+    agency: "Maryland Cannabis Administration (MCA)"
+    category: licenses
+    subcategory: cannabis_businesses
+    format: csv
+    url: "https://mca.maryland.gov/mca_admin/Pages/Industry-Resources.aspx"
+    discovery_url: "https://mca.maryland.gov"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [maryland, md, mca, licenses, dispensaries]
+    notes: "Maryland MCA - Check for direct CSV download. May need custom scraper."
+    website: "https://mca.maryland.gov"
+
+# =============================================================================
+# VIRGINIA
+# =============================================================================
+
+  - id: va_cannabis_licenses
+    name: "Virginia - Cannabis Retail Licenses"
+    state: VA
+    agency: "Virginia Cannabis Control Authority (CCA)"
+    category: licenses
+    subcategory: retail_licenses
+    format: csv
+    url: "https://www.virginiacontrols.gov/licensees/"
+    discovery_url: "https://www.virginiacontrols.gov"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [virginia, va, cca, licenses, dispensaries, adult_use]
+    notes: "Virginia CCA cannabis licenses. Check for direct download link."
+    website: "https://www.virginiacontrols.gov"
+
+# =============================================================================
+# OHIO
+# =============================================================================
+
+  - id: oh_dcc_dispensary_licenses
+    name: "Ohio Division of Cannabis Control - Dispensary Licenses"
+    state: OH
+    agency: "Division of Cannabis Control (DCC)"
+    category: dispensaries
+    subcategory: retail
+    format: csv
+    url: "https://cannabis.ohio.gov/licensing-and-compliance/adult-use/adult-use-dispensaries"
+    discovery_url: "https://cannabis.ohio.gov/licensing-and-compliance"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [ohio, oh, dcc, dispensaries, adult_use, licenses]
+    notes: "Ohio DCC dispensary license list. Check for direct CSV/JSON download."
+    website: "https://cannabis.ohio.gov"
+
+# =============================================================================
+# MINNESOTA
+# =============================================================================
+
+  - id: mn_ocm_licenses
+    name: "Minnesota OCM - Cannabis Business Licenses"
+    state: MN
+    agency: "Office of Cannabis Management (OCM)"
+    category: licenses
+    subcategory: cannabis_businesses
+    format: json
+    url: "https://mn.gov/ocm/businesses/licensed-businesses/"
+    discovery_url: "https://mn.gov/ocm"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [minnesota, mn, ocm, licenses, dispensaries]
+    notes: "Minnesota OCM - Recently legal (2024). Check for API or data download."
+    website: "https://mn.gov/ocm"
+
+# =============================================================================
+# FLORIDA
+# =============================================================================
+
+  - id: fl_doh_mmtc_dispensaries
+    name: "Florida DOH - Medical Marijuana Treatment Centers"
+    state: FL
+    agency: "Florida Department of Health - Office of Medical Marijuana Use (OMMU)"
+    category: dispensaries
+    subcategory: medical_mmtc
+    format: csv
+    url: "https://knowthefactsmmj.com/registry/"
+    discovery_url: "https://www.floridahealth.gov/programs-and-services/office-of-medical-marijuana-use/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [florida, fl, doh, ommu, dispensaries, medical, mmtc]
+    notes: "Florida MMTC (dispensary) locations - medical only state. May need custom scraper."
+    website: "https://www.floridahealth.gov/programs-and-services/office-of-medical-marijuana-use/"
+
+# =============================================================================
+# PENNSYLVANIA
+# =============================================================================
+
+  - id: pa_doh_dispensaries
+    name: "Pennsylvania DOH - Medical Marijuana Dispensaries"
+    state: PA
+    agency: "Pennsylvania Department of Health"
+    category: dispensaries
+    subcategory: medical
+    format: csv
+    url: "https://www.pa.gov/agencies/health/programs/medical-marijuana/patients/find-a-dispensary.html"
+    discovery_url: "https://www.pa.gov/agencies/health/programs/medical-marijuana/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [pennsylvania, pa, doh, dispensaries, medical]
+    notes: "Pennsylvania medical marijuana dispensary list. Medical only. May need scraper."
+    website: "https://www.pa.gov/agencies/health/programs/medical-marijuana/"
+
+# =============================================================================
+# HAWAII
+# =============================================================================
+
+  - id: hi_doh_dispensaries
+    name: "Hawaii DOH - Medical Cannabis Dispensaries"
+    state: HI
+    agency: "Hawaii Department of Health"
+    category: dispensaries
+    subcategory: medical
+    format: csv
+    url: "https://health.hawaii.gov/medicalcannabisregistry/dispensaries/"
+    discovery_url: "https://health.hawaii.gov/medicalcannabisregistry/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [hawaii, hi, doh, dispensaries, medical]
+    notes: "Hawaii medical cannabis dispensary information."
+    website: "https://health.hawaii.gov/medicalcannabisregistry/"
+
+# =============================================================================
+# MISSOURI
+# =============================================================================
+
+  - id: mo_dhss_cannabis_licenses
+    name: "Missouri DHSS - Cannabis Facility Licenses"
+    state: MO
+    agency: "Missouri Department of Health and Senior Services (DHSS)"
+    category: licenses
+    subcategory: cannabis_facilities
+    format: csv
+    url: "https://health.mo.gov/safety/medical-marijuana/licensed-facilities.php"
+    discovery_url: "https://health.mo.gov/safety/medical-marijuana/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [missouri, mo, dhss, licenses, dispensaries, cannabis]
+    notes: "Missouri DHSS cannabis facility licenses. Check for direct CSV download."
+    website: "https://health.mo.gov/safety/medical-marijuana/"
+
+# =============================================================================
+# DELAWARE
+# =============================================================================
+
+  - id: de_dphss_cannabis_licenses
+    name: "Delaware DPHSS - Cannabis Licenses"
+    state: DE
+    agency: "Delaware Department of Health and Social Services"
+    category: licenses
+    subcategory: cannabis_licenses
+    format: csv
+    url: "https://cannabis.delaware.gov/licensing/"
+    discovery_url: "https://cannabis.delaware.gov"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [delaware, de, dphss, licenses, dispensaries]
+    notes: "Delaware cannabis license list. Recently legalized adult use."
+    website: "https://cannabis.delaware.gov"
+
+# =============================================================================
+# RHODE ISLAND
+# =============================================================================
+
+  - id: ri_doh_cannabis_licenses
+    name: "Rhode Island DOH - Cannabis Retail Licenses"
+    state: RI
+    agency: "Rhode Island Department of Business Regulation"
+    category: licenses
+    subcategory: cannabis_retail
+    format: csv
+    url: "https://dbr.ri.gov/divisions/marijuana-for-adult-use/licensing/retailer"
+    discovery_url: "https://dbr.ri.gov/divisions/marijuana-for-adult-use/"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [rhode_island, ri, dbr, licenses, dispensaries, adult_use]
+    notes: "Rhode Island adult-use cannabis retail licenses."
+    website: "https://dbr.ri.gov/divisions/marijuana-for-adult-use/"
+
+# =============================================================================
+# VERMONT
+# =============================================================================
+
+  - id: vt_ccb_retail_licenses
+    name: "Vermont Cannabis Control Board - Retailer Licenses"
+    state: VT
+    agency: "Vermont Cannabis Control Board (CCB)"
+    category: licenses
+    subcategory: retail
+    format: csv
+    url: "https://ccb.vermont.gov/licenses/current"
+    discovery_url: "https://ccb.vermont.gov/licenses"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [vermont, vt, ccb, licenses, dispensaries, retail]
+    notes: "Vermont CCB cannabis retailer and other license types."
+    website: "https://ccb.vermont.gov"
+
+# =============================================================================
+# DISTRICT OF COLUMBIA
+# =============================================================================
+
+  - id: dc_abca_cannabis_licenses
+    name: "DC ABCA - Medical Cannabis Licenses"
+    state: DC
+    agency: "DC Alcoholic Beverage and Cannabis Administration (ABCA)"
+    category: licenses
+    subcategory: medical_cannabis
+    format: soda
+    url: "https://opendata.dc.gov/resource/b5ig-4k6a.json"
+    discovery_url: "https://opendata.dc.gov/search?q=cannabis"
+    enabled: true
+    api_key_required: false
+    params:
+      $limit: 5000
+    pagination:
+      type: offset
+      limit_param: "$limit"
+      offset_param: "$offset"
+      page_size: 5000
+    field_mapping:
+      name: "tradename"
+      license_number: "licensenumber"
+      license_type: "licensetype"
+      license_status: "status"
+      address: "premiseaddress"
+      city: "premisecity"
+      state: "premisestate"
+      zip_code: "premisezip"
+      latitude: "latitude"
+      longitude: "longitude"
+    tags: [dc, washington_dc, abca, licenses, dispensaries, medical]
+    notes: "DC ABCA medical cannabis facilities."
+    website: "https://abca.dc.gov"
+
+# =============================================================================
+# NATIONAL / MULTI-STATE DATA
+# =============================================================================
+
+  - id: ncsl_cannabis_laws
+    name: "NCSL - State Cannabis Laws Database"
+    state: FEDERAL
+    agency: "National Conference of State Legislatures (NCSL)"
+    category: laws
+    subcategory: state_laws
+    format: json
+    url: "https://www.ncsl.org/research/health/state-medical-marijuana-laws.aspx"
+    discovery_url: "https://www.ncsl.org/health/state-cannabis-legislation"
+    enabled: false
+    api_key_required: false
+    pagination:
+      type: none
+    tags: [national, laws, legislation, medical, adult_use, ncsl]
+    notes: "NCSL state cannabis law summaries. Primarily for reference - may need web scraping."
+    website: "https://www.ncsl.org"
+
+  - id: leafly_dispensary_api
+    name: "Leafly - Dispensary Location Data"
+    state: FEDERAL
+    agency: "Leafly (Commercial)"
+    category: dispensaries
+    subcategory: commercial_listings
+    format: json
+    url: "https://consumer-api.leafly.com/api/dispensary_info/v2"
+    discovery_url: "https://www.leafly.com/dispensaries"
+    enabled: false
+    api_key_required: true
+    api_key_env: LEAFLY_API_KEY
+    tags: [commercial, dispensaries, national, locations, leafly]
+    notes: "Leafly commercial API - requires business API partnership. Good for comprehensive dispensary data."
+    website: "https://www.leafly.com/industry"
+
+  - id: weedmaps_dispensaries
+    name: "Weedmaps - Dispensary & Delivery Data"
+    state: FEDERAL
+    agency: "Weedmaps (Commercial)"
+    category: dispensaries
+    subcategory: commercial_listings
+    format: json
+    url: "https://api-g.weedmaps.com/wm/api/v2/listings"
+    discovery_url: "https://developers.weedmaps.com"
+    enabled: false
+    api_key_required: true
+    api_key_env: WEEDMAPS_API_KEY
+    tags: [commercial, dispensaries, national, delivery, weedmaps]
+    notes: "Weedmaps platform API - requires developer account."
+    website: "https://developers.weedmaps.com"
+
+  - id: openstreetmap_dispensaries
+    name: "OpenStreetMap - Cannabis Dispensary Nodes"
+    state: FEDERAL
+    agency: "OpenStreetMap / Overpass API"
+    category: dispensaries
+    subcategory: osm_locations
+    format: json
+    url: "https://overpass-api.de/api/interpreter"
+    discovery_url: "https://overpass-turbo.eu"
+    enabled: true
+    api_key_required: false
+    params:
+      data: '[out:json][timeout:60];node["shop"="cannabis"];out body;>;out skel qt;'
+    pagination:
+      type: none
+    field_mapping:
+      name: "tags.name"
+      address: "tags.addr:street"
+      city: "tags.addr:city"
+      state: "tags.addr:state"
+      zip_code: "tags.addr:postcode"
+      latitude: "lat"
+      longitude: "lon"
+      website: "tags.website"
+      phone: "tags.phone"
+    tags: [national, dispensaries, osm, openstreetmap, locations, geospatial]
+    notes: "OpenStreetMap Overpass API for cannabis shop nodes. Free, community-maintained."
+    website: "https://www.openstreetmap.org"

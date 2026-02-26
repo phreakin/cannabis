@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block title %}Collection Logs{% endblock %}
+{% block page_title %}Collection Logs{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="filter-bar mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label mb-1">Level</label>
+      <select class="form-select form-select-sm" id="filterLevel">
+        <option value="">All Levels</option>
+        <option value="INFO">INFO</option>
+        <option value="WARNING">WARNING</option>
+        <option value="ERROR">ERROR</option>
+        <option value="DEBUG">DEBUG</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Source</label>
+      <select class="form-select form-select-sm" id="filterSource">
+        <option value="">All Sources</option>
+        {% for src in sources %}
+        <option value="{{ src.id }}">[{{ src.state }}] {{ src.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label mb-1">Since</label>
+      <input type="text" class="form-control form-control-sm" id="filterSince"
+             placeholder="e.g. 2024-01-01" data-flatpickr>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" id="filterSearch"
+               placeholder="Search message…">
+      </div>
+    </div>
+    <div class="col-md-1">
+      <div class="form-check form-switch mt-3">
+        <input class="form-check-input" type="checkbox" id="autoRefresh">
+        <label class="form-check-label" for="autoRefresh" style="font-size:.75rem;">Auto</label>
+      </div>
+    </div>
+    <div class="col-md-1">
+      <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetFilters()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Result info -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <small class="text-muted" id="resultCount">Loading…</small>
+  <div class="d-flex align-items-center gap-2">
+    <label class="form-label mb-0 text-muted" style="font-size:.78rem;">Per page</label>
+    <select class="form-select form-select-sm" style="width:75px;" id="perPageSelect">
+      <option value="50" selected>50</option>
+      <option value="100">100</option>
+      <option value="200">200</option>
+    </select>
+  </div>
+</div>
+
+<!-- Log Table -->
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0" id="logTable">
+        <thead class="table-light">
+          <tr>
+            <th style="width:140px;">Time</th>
+            <th style="width:70px;">Level</th>
+            <th style="width:180px;">Source</th>
+            <th style="width:60px;">Run</th>
+            <th>Message</th>
+            <th style="width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody">
+          <tr><td colspan="6" class="text-center text-muted py-4">
+            <div class="spinner-border spinner-border-sm me-2"></div>Loading…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+<div class="d-flex justify-content-between align-items-center mt-3">
+  <div id="paginationInfo" class="text-muted" style="font-size:.8rem;"></div>
+  <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logDetailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Log Details</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="logDetailBody"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let totalPages  = 1;
+let autoRefreshInterval = null;
+
+// Flatpickr init
+flatpickr('[data-flatpickr]', { dateFormat: 'Y-m-d' });
+
+function getFilters() {
+  return {
+    level:     document.getElementById('filterLevel').value,
+    source_id: document.getElementById('filterSource').value,
+    since:     document.getElementById('filterSince').value,
+    search:    document.getElementById('filterSearch').value,
+    page:      currentPage,
+    per_page:  document.getElementById('perPageSelect').value,
+  };
+}
+
+function resetFilters() {
+  ['filterLevel','filterSource'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('filterSince').value = '';
+  document.getElementById('filterSearch').value = '';
+  currentPage = 1;
+  loadLogs();
+}
+
+async function loadLogs() {
+  const params = getFilters();
+  const qs = Object.entries(params)
+    .filter(([,v]) => v !== '' && v !== null)
+    .map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+  const tbody = document.getElementById('logTableBody');
+
+  try {
+    const data = await apiGet('/api/logs?' + qs);
+    totalPages = data.pages;
+    document.getElementById('resultCount').textContent =
+      `${fmtNumber(data.total)} log entries`;
+    renderLogs(data.logs);
+    renderPagination(data.page, data.pages, data.total);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-3">
+      Error: ${escHtml(err.message)}</td></tr>`;
+  }
+}
+
+function levelBadge(level) {
+  const map = {
+    INFO:    'bg-info text-dark',
+    WARNING: 'bg-warning text-dark',
+    ERROR:   'bg-danger',
+    DEBUG:   'bg-secondary',
+  };
+  return `<span class="badge ${map[level] || 'bg-secondary'}" style="font-size:.68rem;">${escHtml(level)}</span>`;
+}
+
+function renderLogs(logs) {
+  const tbody = document.getElementById('logTableBody');
+  if (!logs || logs.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state">
+        <i class="bi bi-journal-x"></i>
+        <h5>No log entries</h5>
+        <p class="mb-0">Logs appear after collection runs.</p>
+      </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = logs.map(log => `
+    <tr class="${log.level === 'ERROR' ? 'table-danger' : log.level === 'WARNING' ? 'table-warning' : ''}">
+      <td class="text-muted text-mono" style="white-space:nowrap;font-size:.75rem;">${fmtDate(log.created_at)}</td>
+      <td>${levelBadge(log.level)}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          title="${escHtml(log.source_name)}">${escHtml(log.source_name) || '—'}</td>
+      <td class="text-muted text-mono">${log.run_id ? `<a href="#" onclick="showRunDetail(${log.run_id})">#${log.run_id}</a>` : '—'}</td>
+      <td class="log-message" style="max-width:400px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+          title="${escHtml(log.message)}">${escHtml(log.message)}</td>
+      <td>
+        ${log.details ? `<button class="btn btn-xs btn-outline-secondary" onclick='showLogDetail(${JSON.stringify(log)})'>
+          <i class="bi bi-chevron-down"></i></button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+function showLogDetail(log) {
+  document.getElementById('logDetailBody').innerHTML = `
+    <dl class="row mb-3">
+      <dt class="col-sm-3">Time</dt><dd class="col-sm-9">${fmtDate(log.created_at)}</dd>
+      <dt class="col-sm-3">Level</dt><dd class="col-sm-9">${levelBadge(log.level)}</dd>
+      <dt class="col-sm-3">Source</dt><dd class="col-sm-9">${escHtml(log.source_name) || '—'}</dd>
+      <dt class="col-sm-3">Run ID</dt><dd class="col-sm-9">${log.run_id || '—'}</dd>
+    </dl>
+    <h6>Message</h6>
+    <pre class="bg-light p-2 rounded log-message">${escHtml(log.message)}</pre>
+    ${log.details ? `<h6>Details</h6>
+    <pre class="bg-light p-2 rounded" style="font-size:.75rem;max-height:300px;overflow:auto;">${
+      escHtml(JSON.stringify(log.details, null, 2))
+    }</pre>` : ''}`;
+  new bootstrap.Modal(document.getElementById('logDetailModal')).show();
+}
+
+function renderPagination(page, pages, total) {
+  const ul = document.getElementById('pagination');
+  const info = document.getElementById('paginationInfo');
+  const perPage = parseInt(document.getElementById('perPageSelect').value);
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  info.textContent = total > 0 ? `Showing ${fmtNumber(start)}–${fmtNumber(end)} of ${fmtNumber(total)}` : '';
+
+  if (pages <= 1) { ul.innerHTML = ''; return; }
+
+  let html = `<li class="page-item ${page<=1?'disabled':''}">
+    <a class="page-link" href="#" onclick="goToPage(${page-1});return false;">‹</a></li>`;
+  for (let p = Math.max(1, page-2); p <= Math.min(pages, page+2); p++) {
+    html += `<li class="page-item ${p===page?'active':''}">
+      <a class="page-link" href="#" onclick="goToPage(${p});return false;">${p}</a></li>`;
+  }
+  html += `<li class="page-item ${page>=pages?'disabled':''}">
+    <a class="page-link" href="#" onclick="goToPage(${page+1});return false;">›</a></li>`;
+  ul.innerHTML = html;
+}
+
+function goToPage(p) {
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  loadLogs();
+}
+
+// Auto-refresh
+document.getElementById('autoRefresh').addEventListener('change', e => {
+  if (e.target.checked) {
+    autoRefreshInterval = setInterval(loadLogs, 10000);
+    showToast('Auto-refresh enabled (10s)', 'info', 2000);
+  } else {
+    clearInterval(autoRefreshInterval);
+  }
+});
+
+const debouncedLoad = debounce(loadLogs, 400);
+['filterLevel','filterSource'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => { currentPage = 1; loadLogs(); });
+});
+document.getElementById('filterSearch').addEventListener('input', () => { currentPage = 1; debouncedLoad(); });
+document.getElementById('perPageSelect').addEventListener('change', () => { currentPage = 1; loadLogs(); });
+
+loadLogs();
+</script>
+{% endblock %}

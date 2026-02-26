@@ -1,0 +1,607 @@
+{% extends "base.html" %}
+{% block title %}Import Entities – Cannabis Data{% endblock %}
+{% block page_title %}Import Data{% endblock %}
+
+{% block topbar_actions %}
+  <a href="/entities" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Back to Entities
+  </a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ── Step indicator ──────────────────────────────────────────── */
+  .import-steps { display:flex; align-items:center; margin-bottom:2rem; }
+  .step-item { display:flex; flex-direction:column; align-items:center; flex:1; position:relative; }
+  .step-item:not(:last-child)::after {
+    content:''; position:absolute; top:18px; left:60%; width:80%; height:2px;
+    background:#dee2e6; z-index:0;
+  }
+  .step-item.done:not(:last-child)::after  { background:#198754; }
+  .step-item.active:not(:last-child)::after { background:#dee2e6; }
+  .step-circle {
+    width:36px; height:36px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-weight:700;
+    font-size:.85rem; z-index:1; border:2px solid #dee2e6;
+    background:#fff; color:#6c757d;
+  }
+  .step-item.active .step-circle { border-color:#0d6efd; background:#0d6efd; color:#fff; }
+  .step-item.done   .step-circle { border-color:#198754; background:#198754; color:#fff; }
+  .step-label { font-size:.75rem; color:#6c757d; margin-top:.35rem; white-space:nowrap; }
+  .step-item.active .step-label { color:#0d6efd; font-weight:600; }
+  .step-item.done   .step-label { color:#198754; }
+
+  /* ── Upload drop zone ────────────────────────────────────────── */
+  .drop-zone {
+    border:2px dashed #dee2e6; border-radius:.75rem; padding:3rem 2rem;
+    text-align:center; cursor:pointer; transition:border-color .2s, background .2s;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color:#0d6efd; background:#f0f5ff; }
+  .drop-zone .drop-icon { font-size:3rem; color:#adb5bd; display:block; margin-bottom:.75rem; }
+  .drop-zone input[type=file] { display:none; }
+  .file-selected { border-color:#198754 !important; background:#f0faf5 !important; }
+  .file-selected .drop-icon { color:#198754 !important; }
+
+  /* ── Mapping table ───────────────────────────────────────────── */
+  .map-table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; color:#6c757d; }
+  .map-select { min-width:180px; }
+  .map-preview-cell { font-size:.8rem; color:#495057; max-width:200px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .map-row.unmapped td { opacity:.6; }
+  .map-row.required-missing td:nth-child(2) select { border-color:#dc3545; }
+
+  /* ── Preview table ───────────────────────────────────────────── */
+  #previewTable { font-size:.82rem; }
+  #previewTable thead { background:#f8f9fa; }
+
+  /* ── Results ─────────────────────────────────────────────────── */
+  .result-stat { text-align:center; padding:1rem; border-radius:.5rem; }
+  .result-stat .stat-num { font-size:2rem; font-weight:700; line-height:1; }
+  .result-stat .stat-label { font-size:.8rem; color:#6c757d; margin-top:.25rem; }
+
+  .step-panel { display:none; }
+  .step-panel.active { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Step indicator -->
+<div class="import-steps" id="stepIndicator">
+  <div class="step-item active" id="si-1">
+    <div class="step-circle">1</div>
+    <div class="step-label">Upload File</div>
+  </div>
+  <div class="step-item" id="si-2">
+    <div class="step-circle">2</div>
+    <div class="step-label">Map Columns</div>
+  </div>
+  <div class="step-item" id="si-3">
+    <div class="step-circle">3</div>
+    <div class="step-label">Import</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STEP 1 – Upload
+════════════════════════════════════════════════════════════════ -->
+<div class="step-panel active" id="step1">
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title mb-1">Choose entity type &amp; upload a file</h5>
+      <p class="text-muted small mb-4">Accepted formats: CSV, TSV, JSON (array), JSONL (one object per line)</p>
+
+      <!-- Entity type selector -->
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Entity Type</label>
+        <div class="d-flex flex-wrap gap-2" id="typeSelector">
+          {% for t, label in [('companies','Companies'),('doctors','Doctors'),('brands','Brands'),('products','Products')] %}
+          <button type="button"
+            class="btn {{ 'btn-primary' if t == entity_type else 'btn-outline-secondary' }} entity-type-btn"
+            data-type="{{ t }}">
+            <i class="bi bi-{{ 'building' if t=='companies' else 'person-badge' if t=='doctors' else 'tag' if t=='brands' else 'box-seam' }} me-1"></i>
+            {{ label }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <i class="bi bi-cloud-arrow-up drop-icon" id="dropIcon"></i>
+        <div id="dropText">
+          <strong>Drag &amp; drop a file here</strong>, or click to browse
+        </div>
+        <div class="text-muted small mt-2" id="dropSub">CSV · TSV · JSON · JSONL — max 20 MB</div>
+        <input type="file" id="fileInput" accept=".csv,.tsv,.txt,.json,.jsonl">
+      </div>
+
+      <!-- Download sample links -->
+      <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted small">Don't have a file?</span>
+        <a id="sampleCsvLink" href="#" class="btn btn-xs btn-outline-secondary" target="_blank">
+          <i class="bi bi-filetype-csv me-1"></i>Sample CSV
+        </a>
+        <a id="sampleJsonLink" href="#" class="btn btn-xs btn-outline-secondary" target="_blank">
+          <i class="bi bi-filetype-json me-1"></i>Sample JSON
+        </a>
+      </div>
+
+      <div class="mt-4 d-flex justify-content-end gap-2">
+        <button class="btn btn-primary" id="btn1Next" disabled>
+          Next: Map Columns <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+
+      <div id="step1Error" class="alert alert-danger mt-3 d-none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STEP 2 – Column mapping + options
+════════════════════════════════════════════════════════════════ -->
+<div class="step-panel" id="step2">
+  <div class="row g-3">
+
+    <!-- Left: mapping table -->
+    <div class="col-lg-8">
+      <div class="card h-100">
+        <div class="card-header d-flex align-items-center justify-content-between py-2">
+          <span class="fw-semibold">Column Mapping</span>
+          <button class="btn btn-xs btn-outline-secondary" id="btnAutoRemap">
+            <i class="bi bi-magic me-1"></i>Auto-map
+          </button>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table map-table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-3">Source Column</th>
+                  <th>Maps To</th>
+                  <th>Sample Value</th>
+                </tr>
+              </thead>
+              <tbody id="mappingBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer text-muted small py-2">
+          Unmapped columns are ignored. Required fields are marked <span class="text-danger fw-bold">*</span>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: options -->
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header py-2 fw-semibold">Import Options</div>
+        <div class="card-body">
+          <label class="form-label fw-semibold small">Duplicate Handling</label>
+          <div class="form-check mb-1">
+            <input class="form-check-input" type="radio" name="importMode" id="modeInsert" value="insert" checked>
+            <label class="form-check-label" for="modeInsert">
+              Insert all rows
+              <small class="d-block text-muted">May create duplicates</small>
+            </label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="radio" name="importMode" id="modeSkip" value="skip_dupes">
+            <label class="form-check-label" for="modeSkip">
+              Skip duplicates
+              <small class="d-block text-muted">Skips rows that match existing records</small>
+            </label>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="chkSkipErrors" checked>
+            <label class="form-check-label" for="chkSkipErrors">
+              Skip rows with errors
+              <small class="d-block text-muted">Unchecked = stop on first error</small>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header py-2 fw-semibold">File Summary</div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><td class="text-muted ps-3">File</td><td id="sumFilename" class="text-break pe-3">—</td></tr>
+              <tr><td class="text-muted ps-3">Rows</td><td id="sumRows">—</td></tr>
+              <tr><td class="text-muted ps-3">Columns</td><td id="sumCols">—</td></tr>
+              <tr><td class="text-muted ps-3">Entity</td><td id="sumEntity">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview table -->
+  <div class="card mt-3">
+    <div class="card-header py-2 fw-semibold">
+      <i class="bi bi-table me-1"></i>Data Preview
+      <small class="text-muted ms-2">(first 10 rows)</small>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="max-height:280px; overflow-y:auto;">
+        <table class="table table-sm table-hover align-middle mb-0" id="previewTable">
+          <thead id="previewHead"></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex justify-content-between gap-2">
+    <button class="btn btn-outline-secondary" id="btn2Back">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </button>
+    <button class="btn btn-success" id="btn2Import">
+      <i class="bi bi-upload me-1"></i>Start Import
+    </button>
+  </div>
+
+  <div id="step2Error" class="alert alert-danger mt-3 d-none"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STEP 3 – Results
+════════════════════════════════════════════════════════════════ -->
+<div class="step-panel" id="step3">
+  <div class="card">
+    <div class="card-body">
+
+      <div id="importSuccessBanner" class="d-none">
+        <div class="text-center mb-4">
+          <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+          <h4 class="mt-2 mb-0">Import Complete</h4>
+        </div>
+
+        <div class="row g-3 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="result-stat bg-light">
+              <div class="stat-num text-dark" id="resTotal">—</div>
+              <div class="stat-label">Total Rows</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="result-stat" style="background:#d1e7dd">
+              <div class="stat-num text-success" id="resInserted">—</div>
+              <div class="stat-label">Inserted</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="result-stat" style="background:#fff3cd">
+              <div class="stat-num text-warning" id="resSkipped">—</div>
+              <div class="stat-label">Skipped</div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="result-stat" style="background:#f8d7da">
+              <div class="stat-num text-danger" id="resErrors">—</div>
+              <div class="stat-label">Errors</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="importFailBanner" class="d-none">
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <strong>Import failed.</strong> <span id="failMsg"></span>
+        </div>
+      </div>
+
+      <!-- Error details table -->
+      <div id="errSection" class="d-none">
+        <h6 class="fw-semibold mb-2"><i class="bi bi-exclamation-circle text-danger me-1"></i>Row Errors</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered align-middle" id="errTable">
+            <thead class="table-light">
+              <tr><th style="width:80px">Row #</th><th style="width:130px">Field</th><th>Message</th><th>Data</th></tr>
+            </thead>
+            <tbody id="errBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        <a id="viewEntityLink" href="#" class="btn btn-primary">
+          <i class="bi bi-table me-1"></i>View Records
+        </a>
+        <button class="btn btn-outline-secondary" id="btnImportMore">
+          <i class="bi bi-arrow-repeat me-1"></i>Import Another File
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── State ────────────────────────────────────────────────────────
+let currentType   = '{{ entity_type }}';
+let uploadedFile  = null;
+let previewData   = null;   // response from /preview
+
+const ENTITY_LABELS = {
+  companies: 'Companies', doctors: 'Doctors',
+  brands: 'Brands', products: 'Products'
+};
+const ENTITY_ICONS = {
+  companies: 'building', doctors: 'person-badge',
+  brands: 'tag', products: 'box-seam'
+};
+
+// ── Utility ──────────────────────────────────────────────────────
+function showStep(n) {
+  document.querySelectorAll('.step-panel').forEach((p,i) => {
+    p.classList.toggle('active', i+1 === n);
+  });
+  document.querySelectorAll('.step-item').forEach((el,i) => {
+    el.classList.remove('active','done');
+    if (i+1 < n)  el.classList.add('done');
+    if (i+1 === n) el.classList.add('active');
+  });
+}
+
+function showErr(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg; el.classList.remove('d-none');
+}
+function clearErr(elId) {
+  document.getElementById(elId).classList.add('d-none');
+}
+
+function esc(v) {
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Sample links ─────────────────────────────────────────────────
+function updateSampleLinks() {
+  document.getElementById('sampleCsvLink').href  = `/api/entities/${currentType}/sample?fmt=csv`;
+  document.getElementById('sampleJsonLink').href = `/api/entities/${currentType}/sample?fmt=json`;
+}
+updateSampleLinks();
+
+// ── Entity type buttons ──────────────────────────────────────────
+document.querySelectorAll('.entity-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentType = btn.dataset.type;
+    document.querySelectorAll('.entity-type-btn').forEach(b => {
+      b.classList.remove('btn-primary');
+      b.classList.add('btn-outline-secondary');
+    });
+    btn.classList.remove('btn-outline-secondary');
+    btn.classList.add('btn-primary');
+    updateSampleLinks();
+    // reset file if type changes
+    uploadedFile = null;
+    previewData  = null;
+    resetDropZone();
+  });
+});
+
+// ── Drop zone ────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const btn1Next  = document.getElementById('btn1Next');
+
+function resetDropZone() {
+  dropZone.classList.remove('file-selected');
+  document.getElementById('dropIcon').className = 'bi bi-cloud-arrow-up drop-icon';
+  document.getElementById('dropText').innerHTML = '<strong>Drag &amp; drop a file here</strong>, or click to browse';
+  document.getElementById('dropSub').textContent = 'CSV · TSV · JSON · JSONL — max 20 MB';
+  btn1Next.disabled = true;
+}
+
+function handleFile(file) {
+  if (!file) return;
+  if (file.size > 20 * 1024 * 1024) {
+    showErr('step1Error', 'File is too large (max 20 MB).'); return;
+  }
+  clearErr('step1Error');
+  uploadedFile = file;
+  dropZone.classList.add('file-selected');
+  document.getElementById('dropIcon').className = 'bi bi-file-earmark-check drop-icon';
+  document.getElementById('dropText').innerHTML = `<strong>${esc(file.name)}</strong>`;
+  document.getElementById('dropSub').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  btn1Next.disabled = false;
+}
+
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+// ── Step 1 → 2 (preview call) ────────────────────────────────────
+btn1Next.addEventListener('click', async () => {
+  clearErr('step1Error');
+  btn1Next.disabled = true;
+  btn1Next.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Parsing…';
+
+  const fd = new FormData();
+  fd.append('file', uploadedFile);
+
+  try {
+    const res  = await fetch(`/api/entities/${currentType}/preview`, { method:'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Preview failed');
+    previewData = data;
+    buildMappingUI(data);
+    showStep(2);
+  } catch(e) {
+    showErr('step1Error', e.message);
+  } finally {
+    btn1Next.disabled = false;
+    btn1Next.innerHTML = 'Next: Map Columns <i class="bi bi-arrow-right ms-1"></i>';
+  }
+});
+
+// ── Build column mapping UI ──────────────────────────────────────
+function buildMappingUI(data) {
+  const { headers, rows, auto_mapping, field_options, field_labels, required_fields } = data;
+
+  // File summary
+  document.getElementById('sumFilename').textContent = uploadedFile.name;
+  document.getElementById('sumRows').textContent     = data.total_rows ?? rows.length;
+  document.getElementById('sumCols').textContent     = headers.length;
+  document.getElementById('sumEntity').textContent   = ENTITY_LABELS[currentType];
+
+  // Build option HTML once
+  const noneOpt = `<option value="">— skip —</option>`;
+  const opts = field_options.map(f => {
+    const lbl = field_labels[f] || f;
+    const req = required_fields.includes(f) ? ' *' : '';
+    return `<option value="${esc(f)}">${esc(lbl)}${req}</option>`;
+  }).join('');
+
+  // Mapping rows
+  const tbody = document.getElementById('mappingBody');
+  tbody.innerHTML = '';
+  headers.forEach((h, i) => {
+    const mapped  = auto_mapping[h] || '';
+    const sample  = (rows[0] || {})[h] ?? '';
+    const isReq   = mapped && required_fields.includes(mapped);
+    const tr = document.createElement('tr');
+    tr.className = 'map-row' + (mapped ? '' : ' unmapped') + (isReq ? '' : '');
+    tr.dataset.col = h;
+    tr.innerHTML = `
+      <td class="ps-3 fw-medium">${esc(h)}</td>
+      <td>
+        <select class="form-select form-select-sm map-select" data-src="${esc(h)}">
+          ${noneOpt}${opts}
+        </select>
+      </td>
+      <td class="map-preview-cell" title="${esc(sample)}">${esc(String(sample).substring(0,60))}</td>
+    `;
+    tbody.appendChild(tr);
+    const sel = tr.querySelector('select');
+    sel.value = mapped;
+    sel.addEventListener('change', () => {
+      tr.classList.toggle('unmapped', !sel.value);
+    });
+  });
+
+  // Preview table
+  buildPreviewTable(headers, rows);
+
+  // Auto-remap button
+  document.getElementById('btnAutoRemap').onclick = () => {
+    tbody.querySelectorAll('select').forEach(sel => {
+      const src    = sel.dataset.src;
+      const mapped = auto_mapping[src] || '';
+      sel.value    = mapped;
+      sel.closest('tr').classList.toggle('unmapped', !mapped);
+    });
+  };
+}
+
+function buildPreviewTable(headers, rows) {
+  const thead = document.getElementById('previewHead');
+  const tbody = document.getElementById('previewBody');
+  thead.innerHTML = '<tr>' + headers.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>';
+  tbody.innerHTML = rows.map(row =>
+    '<tr>' + headers.map(h => `<td class="map-preview-cell" title="${esc(row[h] ?? '')}">${esc(String(row[h] ?? '').substring(0,40))}</td>`).join('') + '</tr>'
+  ).join('');
+}
+
+// ── Step 2 → 1 ───────────────────────────────────────────────────
+document.getElementById('btn2Back').addEventListener('click', () => showStep(1));
+
+// ── Step 2 → 3 (import call) ─────────────────────────────────────
+document.getElementById('btn2Import').addEventListener('click', async () => {
+  clearErr('step2Error');
+  const btn = document.getElementById('btn2Import');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Importing…';
+
+  // Build mapping from current selects
+  const colMap = {};
+  document.querySelectorAll('#mappingBody select.map-select').forEach(sel => {
+    if (sel.value) colMap[sel.dataset.src] = sel.value;
+  });
+
+  const mode       = document.querySelector('input[name=importMode]:checked').value;
+  const skipErrors = document.getElementById('chkSkipErrors').checked;
+
+  const fd = new FormData();
+  fd.append('file',        uploadedFile);
+  fd.append('mapping',     JSON.stringify(colMap));
+  fd.append('mode',        mode);
+  fd.append('skip_errors', skipErrors ? '1' : '0');
+
+  try {
+    const res  = await fetch(`/api/entities/${currentType}/import`, { method:'POST', body: fd });
+    const data = await res.json();
+    showStep(3);
+    buildResultsUI(data);
+  } catch(e) {
+    showErr('step2Error', 'Import request failed: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-upload me-1"></i>Start Import';
+  }
+});
+
+// ── Build results UI ─────────────────────────────────────────────
+function buildResultsUI(data) {
+  document.getElementById('importSuccessBanner').classList.add('d-none');
+  document.getElementById('importFailBanner').classList.add('d-none');
+  document.getElementById('errSection').classList.add('d-none');
+
+  if (!data.success && !data.inserted && !data.skipped) {
+    document.getElementById('importFailBanner').classList.remove('d-none');
+    document.getElementById('failMsg').textContent = data.error || 'Unknown error';
+    return;
+  }
+
+  document.getElementById('importSuccessBanner').classList.remove('d-none');
+  document.getElementById('resTotal').textContent    = data.total_rows ?? '—';
+  document.getElementById('resInserted').textContent = data.inserted   ?? 0;
+  document.getElementById('resSkipped').textContent  = data.skipped    ?? 0;
+  document.getElementById('resErrors').textContent   = (data.errors || []).length;
+
+  // View link
+  document.getElementById('viewEntityLink').href = `/entities/${currentType}`;
+
+  // Errors table
+  const errors = data.errors || [];
+  if (errors.length) {
+    document.getElementById('errSection').classList.remove('d-none');
+    const tbody = document.getElementById('errBody');
+    tbody.innerHTML = errors.map(e => `
+      <tr>
+        <td>${esc(e.row ?? '—')}</td>
+        <td>${esc(e.field ?? '—')}</td>
+        <td>${esc(e.message || e.error || '—')}</td>
+        <td class="map-preview-cell" title="${esc(JSON.stringify(e.data||{}))}">
+          ${esc(JSON.stringify(e.data||{}).substring(0,80))}
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ── Import More ──────────────────────────────────────────────────
+document.getElementById('btnImportMore').addEventListener('click', () => {
+  uploadedFile = null;
+  previewData  = null;
+  fileInput.value = '';
+  resetDropZone();
+  clearErr('step1Error');
+  clearErr('step2Error');
+  showStep(1);
+});
+</script>
+{% endblock %}

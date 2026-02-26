@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}Exports{% endblock %}
+{% block page_title %}Data Exports{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+
+    <!-- Quick Export -->
+    <div class="card mb-4">
+      <div class="card-header">Quick Export</div>
+      <div class="card-body">
+        <p class="text-muted" style="font-size:.85rem;">
+          Export filtered data in various formats. Large exports may take a moment to generate.
+        </p>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">State</label>
+            <select class="form-select form-select-sm" id="expState">
+              <option value="">All States</option>
+              {% for s in states %}
+              <option value="{{ s }}">{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category</label>
+            <select class="form-select form-select-sm" id="expCategory">
+              <option value="">All Categories</option>
+              {% for c in categories %}
+              <option value="{{ c }}">{{ c }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Source</label>
+            <select class="form-select form-select-sm" id="expSource">
+              <option value="">All Sources</option>
+              {% for src in sources %}
+              <option value="{{ src.id }}">[{{ src.state }}] {{ src.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">GPS Coords</label>
+            <select class="form-select form-select-sm" id="expGps">
+              <option value="">All Records</option>
+              <option value="1">GPS-tagged Only</option>
+              <option value="0">No GPS</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Max Records</label>
+            <select class="form-select form-select-sm" id="expLimit">
+              <option value="1000">1,000</option>
+              <option value="5000">5,000</option>
+              <option value="10000" selected>10,000</option>
+              <option value="50000">50,000</option>
+              <option value="0">All (no limit)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-success" onclick="doExport('csv')">
+            <i class="bi bi-filetype-csv me-2"></i>Export CSV
+          </button>
+          <button class="btn btn-outline-warning" onclick="doExport('json')">
+            <i class="bi bi-filetype-json me-2"></i>Export JSON
+          </button>
+          <button class="btn btn-outline-primary" onclick="doExport('geojson')">
+            <i class="bi bi-geo-alt me-2"></i>Export GeoJSON
+            <small class="ms-1 opacity-60">(GPS only)</small>
+          </button>
+          <button class="btn btn-outline-secondary" onclick="doExport('xlsx')">
+            <i class="bi bi-file-earmark-spreadsheet me-2"></i>Export Excel
+          </button>
+        </div>
+
+        <div id="exportStatus" class="mt-3 d-none">
+          <div class="alert alert-info mb-0">
+            <div class="spinner-border spinner-border-sm me-2"></div>
+            Preparing export…
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Access -->
+    <div class="card mb-4">
+      <div class="card-header">API Endpoints</div>
+      <div class="card-body">
+        <p class="text-muted" style="font-size:.85rem;">
+          Access data programmatically via the REST API. Combine query parameters as needed.
+        </p>
+
+        <div class="mb-3">
+          <h6 style="font-size:.8rem;" class="text-uppercase text-muted mb-2">Records</h6>
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light">
+              <tr><th>Endpoint</th><th>Description</th></tr>
+            </thead>
+            <tbody style="font-size:.8rem;">
+              <tr>
+                <td><code>GET /api/records</code></td>
+                <td>Paginated records — params: <code>state</code>, <code>category</code>, <code>source_id</code>, <code>has_gps</code>, <code>search</code>, <code>page</code>, <code>per_page</code></td>
+              </tr>
+              <tr>
+                <td><code>GET /api/records/geojson</code></td>
+                <td>GeoJSON FeatureCollection of GPS-tagged records</td>
+              </tr>
+              <tr>
+                <td><code>GET /api/records/export</code></td>
+                <td>File download — add <code>format=csv|json|geojson</code></td>
+              </tr>
+              <tr>
+                <td><code>GET /api/records/{id}</code></td>
+                <td>Single record by ID</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mb-3">
+          <h6 style="font-size:.8rem;" class="text-uppercase text-muted mb-2">Sources &amp; Schedules</h6>
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="table-light">
+              <tr><th>Endpoint</th><th>Description</th></tr>
+            </thead>
+            <tbody style="font-size:.8rem;">
+              <tr><td><code>GET /api/sources</code></td><td>List all data sources</td></tr>
+              <tr><td><code>POST /api/sources/{id}/run</code></td><td>Trigger manual collection</td></tr>
+              <tr><td><code>GET /api/schedules</code></td><td>List all schedules</td></tr>
+              <tr><td><code>GET /api/runs</code></td><td>Collection run history</td></tr>
+              <tr><td><code>GET /api/logs</code></td><td>Collection log entries</td></tr>
+              <tr><td><code>GET /api/stats/categories</code></td><td>Record counts by category</td></tr>
+              <tr><td><code>GET /api/stats/states</code></td><td>Record counts by state</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h6 style="font-size:.8rem;" class="text-uppercase text-muted mb-2">Example curl</h6>
+          <pre class="bg-light p-2 rounded" style="font-size:.75rem;">curl "http://localhost:5000/api/records?state=CO&amp;category=dispensary&amp;per_page=100&amp;format=json"
+
+curl "http://localhost:5000/api/records/geojson?state=WA" \
+     -o washington_dispensaries.geojson</pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-lg-4">
+
+    <!-- Dataset Summary -->
+    <div class="card mb-3">
+      <div class="card-header">Dataset Summary</div>
+      <div class="card-body p-2" id="datasetSummary">
+        <div class="text-center py-3">
+          <div class="spinner-border spinner-border-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export Formats -->
+    <div class="card">
+      <div class="card-header">Format Guide</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fmt-badge fmt-csv">CSV</span>
+            <strong style="font-size:.82rem;">Comma-Separated</strong>
+          </div>
+          <p class="text-muted mb-0" style="font-size:.78rem;">
+            Best for Excel, Google Sheets, pandas, and most data tools. Includes all standard fields.
+          </p>
+        </div>
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fmt-badge fmt-json">JSON</span>
+            <strong style="font-size:.82rem;">JSON Array</strong>
+          </div>
+          <p class="text-muted mb-0" style="font-size:.78rem;">
+            Full record data including raw source fields. Best for programmatic access.
+          </p>
+        </div>
+        <div class="mb-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fmt-badge fmt-geojson">GeoJSON</span>
+            <strong style="font-size:.82rem;">GeoJSON FeatureCollection</strong>
+          </div>
+          <p class="text-muted mb-0" style="font-size:.78rem;">
+            GPS-tagged records only. Compatible with QGIS, Mapbox, Leaflet, and Google Maps.
+            <em>Note: only records with latitude/longitude are included.</em>
+          </p>
+        </div>
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fmt-badge" style="background:#e8f5e9;color:#1b5e20;">XLSX</span>
+            <strong style="font-size:.82rem;">Excel Workbook</strong>
+          </div>
+          <p class="text-muted mb-0" style="font-size:.78rem;">
+            Multi-sheet Excel file: one sheet per category. Requires openpyxl.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getExportParams() {
+  const p = {};
+  const state    = document.getElementById('expState').value;
+  const category = document.getElementById('expCategory').value;
+  const source   = document.getElementById('expSource').value;
+  const gps      = document.getElementById('expGps').value;
+  const limit    = document.getElementById('expLimit').value;
+  if (state)    p.state    = state;
+  if (category) p.category = category;
+  if (source)   p.source_id = source;
+  if (gps)      p.has_gps  = gps;
+  if (limit && limit !== '0') p.per_page = limit;
+  return p;
+}
+
+function doExport(fmt) {
+  const params = getExportParams();
+  params.format = fmt;
+  if (fmt === 'geojson') params.has_gps = 1;
+
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+  const status = document.getElementById('exportStatus');
+  status.classList.remove('d-none');
+
+  // Trigger download, hide spinner after short delay
+  triggerDownload(`/api/records/export?${qs}`, `cannabis_data.${fmt}`);
+  setTimeout(() => status.classList.add('d-none'), 3000);
+}
+
+async function loadSummary() {
+  try {
+    const [catData, stateData] = await Promise.all([
+      apiGet('/api/stats/categories'),
+      apiGet('/api/stats/states'),
+    ]);
+
+    const total = catData.reduce((s, c) => s + c.count, 0);
+    const byState = stateData.slice(0, 10);
+
+    document.getElementById('datasetSummary').innerHTML = `
+      <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+        <span class="text-muted" style="font-size:.8rem;">Total Records</span>
+        <strong>${fmtNumber(total)}</strong>
+      </div>
+      <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+        <span class="text-muted" style="font-size:.8rem;">States Covered</span>
+        <strong>${stateData.length}</strong>
+      </div>
+      <div class="d-flex justify-content-between border-bottom pb-2 mb-3">
+        <span class="text-muted" style="font-size:.8rem;">Categories</span>
+        <strong>${catData.length}</strong>
+      </div>
+      <div style="font-size:.75rem;">
+        <div class="text-muted mb-1 fw-semibold">Top States</div>
+        ${byState.map(s => `
+          <div class="d-flex justify-content-between mb-1">
+            <span>${escHtml(s.state)}</span>
+            <span class="text-muted">${fmtNumber(s.count)}</span>
+          </div>
+          <div class="progress mb-1" style="height:3px;">
+            <div class="progress-bar bg-success" style="width:${Math.round(s.count/byState[0].count*100)}%"></div>
+          </div>`).join('')}
+      </div>`;
+  } catch (err) {
+    document.getElementById('datasetSummary').innerHTML =
+      `<p class="text-muted text-center p-2">Could not load summary</p>`;
+  }
+}
+
+loadSummary();
+</script>
+{% endblock %}

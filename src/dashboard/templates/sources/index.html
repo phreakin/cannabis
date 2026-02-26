@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Data Sources — Cannabis Data Aggregator{% endblock %}
+{% block page_title %}Data Sources{% endblock %}
+
+{% block topbar_actions %}
+<a href="/sources/new" class="btn btn-sm btn-primary">
+  <i class="bi bi-plus-lg me-1"></i> Add Source
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- FILTER BAR -->
+<div class="card mb-3">
+  <div class="card-body py-2">
+    <div class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="form-label mb-0 me-1 fw-semibold" style="font-size:.8rem;">State:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto" id="filterState">
+          <option value="">All States</option>
+          {% for s in states %}
+          <option value="{{ s.name }}">{{ s.name }} ({{ s.count }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 me-1 fw-semibold" style="font-size:.8rem;">Category:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto" id="filterCategory">
+          <option value="">All Categories</option>
+          {% for c in categories %}
+          <option value="{{ c.name }}">{{ c.name }} ({{ c.count }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0 me-1 fw-semibold" style="font-size:.8rem;">Status:</label>
+        <select class="form-select form-select-sm d-inline-block w-auto" id="filterEnabled">
+          <option value="">All</option>
+          <option value="true">Enabled</option>
+          <option value="false">Disabled</option>
+        </select>
+      </div>
+      <div class="col">
+        <input type="search" class="form-control form-control-sm" id="tableSearch"
+               placeholder="Search sources..." style="max-width:240px;">
+      </div>
+      <div class="col-auto ms-auto">
+        <span class="text-muted-sm" id="sourcesCount">{{ sources|length }} sources</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SOURCES TABLE -->
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="sourcesTable">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>State</th>
+            <th>Category</th>
+            <th>Format</th>
+            <th>URL</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sources %}
+          <tr data-state="{{ s.state }}" data-category="{{ s.category }}" data-enabled="{{ s.enabled|lower }}">
+            <td>
+              <div class="fw-semibold">{{ s.name }}</div>
+              <div class="text-muted-sm">{{ s.source_id }}</div>
+              {% if s.agency %}
+              <div class="text-muted-sm text-truncate" style="max-width:220px;" title="{{ s.agency }}">{{ s.agency }}</div>
+              {% endif %}
+              {% if s.tags %}
+              <div class="mt-1">
+                {% for tag in (s.tags or [])[:4] %}
+                <span class="tag-badge">{{ tag }}</span>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </td>
+            <td><span class="badge bg-secondary">{{ s.state }}</span></td>
+            <td>
+              <span class="category-pill" style="background:#e8f5e9;color:#2e7d32;">{{ s.category }}</span>
+              {% if s.subcategory %}
+              <div class="text-muted-sm mt-1">{{ s.subcategory }}</div>
+              {% endif %}
+            </td>
+            <td><code style="font-size:.75rem;">{{ s.format | upper }}</code></td>
+            <td>
+              {% if s.url %}
+              <a href="{{ s.url }}" target="_blank" class="text-truncate d-block text-muted-sm"
+                 style="max-width:200px;" title="{{ s.url }}">
+                <i class="bi bi-link-45deg"></i>
+                {{ s.url[:50] }}{% if s.url|length > 50 %}...{% endif %}
+              </a>
+              {% else %}
+              <span class="text-muted-sm">Not configured</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox"
+                       {{ 'checked' if s.enabled else '' }}
+                       onchange="toggleSource({{ s.id }}, this)"
+                       id="toggle-{{ s.id }}">
+              </div>
+            </td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <button class="btn btn-sm btn-outline-success" onclick="testSource({{ s.id }}, {{ s.name | tojson }})"
+                        title="Test Connection" {% if not s.url %}disabled{% endif %}>
+                  <i class="bi bi-wifi"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="runSource({{ s.id }}, {{ s.name | tojson }})"
+                        title="Run Now" {% if not s.enabled or not s.url %}disabled{% endif %}>
+                  <i class="bi bi-play"></i>
+                </button>
+                <a href="/sources/{{ s.id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteSource({{ s.id }}, {{ s.name | tojson }})"
+                        title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="text-muted mb-2">No data sources configured</div>
+              <a href="/sources/new" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i> Add Your First Source
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal fade" id="sourceDetailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Source Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="sourceDetailBody">Loading...</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Filter table
+function filterTable() {
+  const state = document.getElementById('filterState').value.toLowerCase();
+  const cat = document.getElementById('filterCategory').value.toLowerCase();
+  const enabled = document.getElementById('filterEnabled').value;
+  const search = document.getElementById('tableSearch').value.toLowerCase();
+
+  let visible = 0;
+  document.querySelectorAll('#sourcesTable tbody tr[data-state]').forEach(row => {
+    const rowState = row.dataset.state.toLowerCase();
+    const rowCat = row.dataset.category.toLowerCase();
+    const rowEnabled = row.dataset.enabled;
+    const rowText = row.textContent.toLowerCase();
+
+    const show = (!state || rowState === state) &&
+                 (!cat || rowCat === cat) &&
+                 (!enabled || rowEnabled === enabled) &&
+                 (!search || rowText.includes(search));
+
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('sourcesCount').textContent = `${visible} sources`;
+}
+
+['filterState', 'filterCategory', 'filterEnabled', 'tableSearch'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', filterTable);
+  document.getElementById(id)?.addEventListener('input', filterTable);
+});
+
+function toggleSource(id, checkbox) {
+  fetch(`/api/sources/${id}/toggle`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      const state = data.enabled ? 'enabled' : 'disabled';
+      showToast(`Source ${state}`, 'success');
+    })
+    .catch(() => {
+      checkbox.checked = !checkbox.checked;
+      showToast('Toggle failed', 'danger');
+    });
+}
+
+function testSource(id, name) {
+  showToast(`Testing connection to "${name}"...`, 'info');
+  fetch(`/api/sources/${id}/test`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      showToast(
+        data.success ? `✅ Connection OK: ${data.message}` : `❌ Failed: ${data.message}`,
+        data.success ? 'success' : 'danger'
+      );
+    });
+}
+
+function runSource(id, name) {
+  if (!confirm(`Run collection for "${name}" now?`)) return;
+  showLoading(true);
+  fetch(`/api/sources/${id}/run`, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      showLoading(false);
+      showToast(
+        data.status === 'success'
+          ? `✅ Collected ${data.records_stored} records`
+          : `❌ Failed: ${data.error || 'Unknown error'}`,
+        data.status === 'success' ? 'success' : 'danger'
+      );
+    })
+    .catch(() => { showLoading(false); showToast('Request failed', 'danger'); });
+}
+
+function deleteSource(id, name) {
+  if (!confirm(`Delete source "${name}"?\n\nThis will also delete all collected data for this source.`)) return;
+  fetch(`/api/sources/${id}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(() => {
+      showToast('Source deleted', 'success');
+      location.reload();
+    });
+}
+</script>
+{% endblock %}

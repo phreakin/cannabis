@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if action == 'edit' else 'New' }} Schedule{% endblock %}
+{% block page_title %}{{ 'Edit Schedule' if action == 'edit' else 'New Collection Schedule' }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="/schedules" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-arrow-left me-1"></i> Back to Schedules
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <form id="scheduleForm">
+
+      <div class="card mb-3">
+        <div class="card-header">Schedule Settings</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Schedule Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="name"
+                     value="{{ schedule.name if schedule else '' }}"
+                     placeholder="e.g., Colorado MED Licensees - Weekly" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Priority</label>
+              <select class="form-select" name="priority">
+                <option value="1" {{ 'selected' if schedule and schedule.priority == 1 else '' }}>High (1)</option>
+                <option value="2" {{ 'selected' if not schedule or schedule.priority == 2 else '' }}>Normal (2)</option>
+                <option value="3" {{ 'selected' if schedule and schedule.priority == 3 else '' }}>Low (3)</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Data Source <span class="text-danger">*</span></label>
+              <select class="form-select" name="source_id" required>
+                <option value="">Select a data source...</option>
+                {% for src in sources %}
+                <option value="{{ src.id }}"
+                        {{ 'selected' if schedule and schedule.source_id == src.id else '' }}>
+                  [{{ src.state }}] {{ src.name }} ({{ src.category }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header">Timing Configuration</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Schedule Type</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="schedule_type"
+                         id="typeCron" value="cron"
+                         {{ 'checked' if not schedule or schedule.schedule_type == 'cron' else '' }}
+                         onchange="updateTypeUI()">
+                  <label class="form-check-label" for="typeCron">
+                    <strong>Cron</strong> — specific times (daily, weekly, monthly)
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="schedule_type"
+                         id="typeInterval" value="interval"
+                         {{ 'checked' if schedule and schedule.schedule_type == 'interval' else '' }}
+                         onchange="updateTypeUI()">
+                  <label class="form-check-label" for="typeInterval">
+                    <strong>Interval</strong> — every N minutes/hours/days
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- CRON FIELDS -->
+            <div id="cronSection">
+              <div class="p-3 bg-light rounded border">
+                <div class="fw-semibold mb-3" style="font-size:.85rem;">
+                  Cron Expression
+                  <a href="https://crontab.guru" target="_blank" class="ms-2 text-muted" style="font-size:.75rem;">
+                    <i class="bi bi-question-circle"></i> crontab.guru
+                  </a>
+                </div>
+                <div class="row g-2">
+                  <div class="col">
+                    <label class="form-label" style="font-size:.75rem;">Minute</label>
+                    <input type="text" class="form-control" name="cron_minute"
+                           value="{{ schedule.cron_minute if schedule else '0' }}" placeholder="0">
+                  </div>
+                  <div class="col">
+                    <label class="form-label" style="font-size:.75rem;">Hour</label>
+                    <input type="text" class="form-control" name="cron_hour"
+                           value="{{ schedule.cron_hour if schedule else '2' }}" placeholder="2">
+                  </div>
+                  <div class="col">
+                    <label class="form-label" style="font-size:.75rem;">Day of Month</label>
+                    <input type="text" class="form-control" name="cron_day_of_month"
+                           value="{{ schedule.cron_day_of_month if schedule else '*' }}" placeholder="*">
+                  </div>
+                  <div class="col">
+                    <label class="form-label" style="font-size:.75rem;">Month</label>
+                    <input type="text" class="form-control" name="cron_month"
+                           value="{{ schedule.cron_month if schedule else '*' }}" placeholder="*">
+                  </div>
+                  <div class="col">
+                    <label class="form-label" style="font-size:.75rem;">Day of Week</label>
+                    <input type="text" class="form-control" name="cron_day_of_week"
+                           value="{{ schedule.cron_day_of_week if schedule else '*' }}" placeholder="sun">
+                  </div>
+                </div>
+                <div class="mt-2">
+                  <div class="text-muted-sm">
+                    Common: <code>0 2 * * sun</code> (Sun 2AM) &bull;
+                    <code>0 3 1 * *</code> (1st of month 3AM) &bull;
+                    <code>0 */6 * * *</code> (every 6 hours)
+                  </div>
+                  <div class="text-muted-sm mt-1">Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat (or use names: sun, mon, ...)</div>
+                </div>
+                <!-- Quick presets -->
+                <div class="mt-2">
+                  <span class="text-muted-sm me-2">Presets:</span>
+                  <button type="button" class="btn btn-xs btn-sm btn-outline-secondary me-1"
+                          onclick="setCron('0','2','*','*','sun')">Weekly (Sun 2AM)</button>
+                  <button type="button" class="btn btn-xs btn-sm btn-outline-secondary me-1"
+                          onclick="setCron('0','3','1','*','*')">Monthly (1st 3AM)</button>
+                  <button type="button" class="btn btn-xs btn-sm btn-outline-secondary me-1"
+                          onclick="setCron('0','*/6','*','*','*')">Every 6h</button>
+                  <button type="button" class="btn btn-xs btn-sm btn-outline-secondary"
+                          onclick="setCron('0','1','*','*','*')">Daily (1AM)</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- INTERVAL FIELDS -->
+            <div id="intervalSection" style="display:none;">
+              <div class="p-3 bg-light rounded border">
+                <div class="fw-semibold mb-3" style="font-size:.85rem;">Interval Settings</div>
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label class="form-label">Every</label>
+                    <input type="number" class="form-control" name="interval_value"
+                           value="{{ schedule.interval_value if schedule else '7' }}" min="1">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Unit</label>
+                    <select class="form-select" name="interval_unit">
+                      {% for unit in ['minutes', 'hours', 'days', 'weeks'] %}
+                      <option value="{{ unit }}"
+                              {{ 'selected' if schedule and schedule.interval_unit == unit else '' }}>
+                        {{ unit }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="enabled" id="schedEnabled"
+                       {{ 'checked' if not schedule or schedule.enabled else '' }}>
+                <label class="form-check-label" for="schedEnabled">Schedule Enabled</label>
+              </div>
+            </div>
+
+            <div class="col-12">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" rows="2">{{ schedule.notes if schedule else '' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg me-1"></i>
+          {{ 'Save Changes' if action == 'edit' else 'Create Schedule' }}
+        </button>
+        <a href="/schedules" class="btn btn-outline-secondary ms-auto">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const IS_EDIT = '{{ action }}' === 'edit';
+const SCHED_ID = {{ schedule.id if schedule else 'null' }};
+
+function updateTypeUI() {
+  const isCron = document.getElementById('typeCron').checked;
+  document.getElementById('cronSection').style.display = isCron ? '' : 'none';
+  document.getElementById('intervalSection').style.display = isCron ? 'none' : '';
+}
+updateTypeUI();
+
+function setCron(min, hour, dom, month, dow) {
+  document.querySelector('[name="cron_minute"]').value = min;
+  document.querySelector('[name="cron_hour"]').value = hour;
+  document.querySelector('[name="cron_day_of_month"]').value = dom;
+  document.querySelector('[name="cron_month"]').value = month;
+  document.querySelector('[name="cron_day_of_week"]').value = dow;
+}
+
+document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = {};
+  for (const [k, v] of formData.entries()) {
+    if (k === 'enabled') data[k] = true;
+    else if (k === 'source_id' || k === 'priority' || k === 'interval_value')
+      data[k] = parseInt(v);
+    else data[k] = v;
+  }
+  if (!formData.has('enabled')) data.enabled = false;
+
+  const url = IS_EDIT ? `/api/schedules/${SCHED_ID}` : '/api/schedules';
+  const method = IS_EDIT ? 'PUT' : 'POST';
+
+  showLoading(true);
+  const resp = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  showLoading(false);
+  const result = await resp.json();
+  if (resp.ok) {
+    showToast(IS_EDIT ? 'Schedule updated!' : 'Schedule created!', 'success');
+    setTimeout(() => location.href = '/schedules', 1000);
+  } else {
+    showToast(result.error || 'Save failed', 'danger');
+  }
+});
+</script>
+{% endblock %}

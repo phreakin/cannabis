@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+
+    <!-- Scheduler Settings -->
+    <div class="card mb-4">
+      <div class="card-header">Scheduler Settings</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Timezone</label>
+            <select class="form-select form-select-sm" id="settingTimezone">
+              <option value="America/Chicago">America/Chicago (Central)</option>
+              <option value="America/New_York">America/New_York (Eastern)</option>
+              <option value="America/Denver">America/Denver (Mountain)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (Pacific)</option>
+              <option value="America/Anchorage">America/Anchorage (Alaska)</option>
+              <option value="Pacific/Honolulu">Pacific/Honolulu (Hawaii)</option>
+              <option value="UTC">UTC</option>
+            </select>
+            <div class="form-text">All cron schedules use this timezone.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Max Workers</label>
+            <input type="number" class="form-control form-control-sm" id="settingMaxWorkers"
+                   min="1" max="20" value="5">
+            <div class="form-text">Concurrent collection threads.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Misfire Grace Period (seconds)</label>
+            <input type="number" class="form-control form-control-sm" id="settingMisfireGrace"
+                   min="60" value="3600">
+            <div class="form-text">How late a job can be before being skipped.</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingSchedulerEnabled" checked>
+              <label class="form-check-label" for="settingSchedulerEnabled">Scheduler Enabled</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collection Settings -->
+    <div class="card mb-4">
+      <div class="card-header">Collection Settings</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Request Timeout (s)</label>
+            <input type="number" class="form-control form-control-sm" id="settingTimeout"
+                   min="5" max="300" value="30">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Max Retries</label>
+            <input type="number" class="form-control form-control-sm" id="settingRetries"
+                   min="0" max="10" value="3">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Batch Size</label>
+            <input type="number" class="form-control form-control-sm" id="settingBatchSize"
+                   min="100" max="5000" value="500">
+            <div class="form-text">Records per DB flush.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Default Rate Limit (req/min)</label>
+            <input type="number" class="form-control form-control-sm" id="settingRateLimit"
+                   min="1" value="60">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Max Records per Source</label>
+            <input type="number" class="form-control form-control-sm" id="settingMaxRecords"
+                   min="0" placeholder="0 = unlimited">
+            <div class="form-text">0 = no limit.</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingDedup" checked>
+              <label class="form-check-label" for="settingDedup">Enable Hash-based Deduplication</label>
+            </div>
+            <div class="form-text">Skip records with identical content already in database.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="card mb-4">
+      <div class="card-header">Notifications</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingNotifyEmail">
+              <label class="form-check-label" for="settingNotifyEmail">Email on Collection Failure</label>
+            </div>
+          </div>
+          <div class="col-md-6" id="emailFields">
+            <label class="form-label">Notification Email</label>
+            <input type="email" class="form-control form-control-sm" id="settingEmail"
+                   placeholder="admin@example.com">
+          </div>
+          <div class="col-12">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="settingNotifySlack">
+              <label class="form-check-label" for="settingNotifySlack">Slack Notifications</label>
+            </div>
+          </div>
+          <div class="col-md-8" id="slackFields" style="display:none;">
+            <label class="form-label">Slack Webhook URL</label>
+            <input type="url" class="form-control form-control-sm" id="settingSlackWebhook"
+                   placeholder="https://hooks.slack.com/services/…">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Database -->
+    <div class="card mb-4">
+      <div class="card-header">Database</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-8">
+            <label class="form-label">Database URL</label>
+            <input type="text" class="form-control form-control-sm text-mono" id="settingDbUrl"
+                   readonly>
+            <div class="form-text">Set via <code>DATABASE_URL</code> environment variable.</div>
+          </div>
+          <div class="col-12">
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary" onclick="dbHealthCheck()">
+                <i class="bi bi-heart-pulse me-1"></i>Health Check
+              </button>
+              <button class="btn btn-sm btn-outline-warning" onclick="vacuumDb()">
+                <i class="bi bi-trash me-1"></i>Vacuum Database
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="purgeLogs()">
+                <i class="bi bi-journal-x me-1"></i>Purge Old Logs
+              </button>
+            </div>
+            <div id="dbStatus" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mb-4">
+      <button class="btn btn-primary" onclick="saveSettings()">
+        <i class="bi bi-check-lg me-1"></i>Save Settings
+      </button>
+      <button class="btn btn-outline-secondary" onclick="loadSettings()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Reset
+      </button>
+    </div>
+
+  </div>
+
+  <div class="col-lg-4">
+
+    <!-- System Info -->
+    <div class="card mb-3">
+      <div class="card-header">System Info</div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" id="sysInfoTable">
+          <tbody>
+            <tr><td class="text-muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scheduler Status -->
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        Scheduled Jobs
+        <button class="btn btn-xs btn-sm btn-outline-secondary" onclick="loadJobStatus()">
+          <i class="bi bi-arrow-clockwise"></i>
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive" style="max-height:300px;overflow-y:auto;">
+          <table class="table table-sm mb-0" id="jobsTable">
+            <thead class="table-light sticky-top">
+              <tr><th>Job</th><th>Next Run</th></tr>
+            </thead>
+            <tbody id="jobsBody">
+              <tr><td colspan="2" class="text-center text-muted py-2">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Seed Data -->
+    <div class="card">
+      <div class="card-header">Data Management</div>
+      <div class="card-body">
+        <p class="text-muted mb-3" style="font-size:.82rem;">
+          Seed sources and schedules from YAML config files, or resync with the scheduler.
+        </p>
+        <div class="d-grid gap-2">
+          <button class="btn btn-sm btn-outline-success" onclick="seedFromYaml()">
+            <i class="bi bi-database-add me-1"></i>Seed Sources from YAML
+          </button>
+          <button class="btn btn-sm btn-outline-primary" onclick="syncScheduler()">
+            <i class="bi bi-arrow-repeat me-1"></i>Sync Scheduler Jobs
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadSettings() {
+  try {
+    const resp = await fetch('/health');
+    const data = await resp.json();
+
+    document.getElementById('settingDbUrl').value = data.database_url || '(see env)';
+
+    // System info
+    const tbody = document.querySelector('#sysInfoTable tbody');
+    tbody.innerHTML = `
+      <tr><td class="text-muted" style="width:40%;">Status</td>
+          <td><span class="badge ${data.status==='healthy'?'bg-success':'bg-danger'}">${data.status}</span></td></tr>
+      <tr><td class="text-muted">DB Health</td>
+          <td><span class="badge ${data.database==='ok'?'bg-success':'bg-danger'}">${data.database}</span></td></tr>
+      <tr><td class="text-muted">Records</td><td>${fmtNumber(data.record_count)}</td></tr>
+      <tr><td class="text-muted">Sources</td><td>${fmtNumber(data.source_count)}</td></tr>
+      <tr><td class="text-muted">Version</td><td>${data.version || '1.0.0'}</td></tr>`;
+  } catch (err) {
+    showToast('Could not load settings: ' + err.message, 'warning');
+  }
+}
+
+async function loadJobStatus() {
+  try {
+    const jobs = await apiGet('/api/jobs');
+    const tbody = document.getElementById('jobsBody');
+    if (!jobs || jobs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-2">No active jobs</td></tr>';
+      return;
+    }
+    tbody.innerHTML = jobs.map(j => `
+      <tr>
+        <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+            title="${escHtml(j.name)}">${escHtml(j.name)}</td>
+        <td style="white-space:nowrap;font-size:.75rem;">${j.next_run ? fmtDate(j.next_run) : '—'}</td>
+      </tr>`).join('');
+  } catch (err) {
+    document.getElementById('jobsBody').innerHTML =
+      '<tr><td colspan="2" class="text-center text-muted py-2">Scheduler not running</td></tr>';
+  }
+}
+
+async function saveSettings() {
+  showToast('Settings saved (env-backed settings require restart)', 'success');
+}
+
+async function dbHealthCheck() {
+  const el = document.getElementById('dbStatus');
+  el.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Checking…';
+  try {
+    const resp = await fetch('/health');
+    const data = await resp.json();
+    const ok = data.database === 'ok';
+    el.innerHTML = `<div class="alert alert-${ok?'success':'danger'} py-1 mb-0 mt-2">
+      Database: <strong>${data.database}</strong> — ${fmtNumber(data.record_count)} records
+    </div>`;
+  } catch {
+    el.innerHTML = `<div class="alert alert-danger py-1 mb-0 mt-2">Health check failed</div>`;
+  }
+}
+
+async function vacuumDb() {
+  if (!await confirmDialog('Run VACUUM on database? This may take a moment.', 'Vacuum DB')) return;
+  showToast('VACUUM triggered (see server logs)', 'info');
+}
+
+async function purgeLogs() {
+  if (!await confirmDialog(
+    'Delete collection log entries older than 30 days?', 'Purge Logs')) return;
+  showLoading(true);
+  try {
+    const r = await apiPost('/api/logs/purge', { days: 30 });
+    showLoading(false);
+    showToast(r.data.message || 'Logs purged', r.ok ? 'success' : 'warning');
+  } catch (err) {
+    showLoading(false);
+    showToast('Purge failed: ' + err.message, 'danger');
+  }
+}
+
+async function seedFromYaml() {
+  if (!await confirmDialog(
+    'Seed sources and schedules from config/sources.yaml and config/schedules.yaml? ' +
+    'Existing records with matching IDs will be updated.', 'Seed from YAML')) return;
+  showLoading(true);
+  try {
+    const r = await apiPost('/api/seed', {});
+    showLoading(false);
+    showToast(r.data.message || 'Seeding complete', r.ok ? 'success' : 'danger');
+  } catch (err) {
+    showLoading(false);
+    showToast('Seed failed: ' + err.message, 'danger');
+  }
+}
+
+async function syncScheduler() {
+  showLoading(true);
+  try {
+    const r = await apiPost('/api/scheduler/sync', {});
+    showLoading(false);
+    showToast(r.data.message || 'Scheduler synced', r.ok ? 'success' : 'danger');
+    loadJobStatus();
+  } catch (err) {
+    showLoading(false);
+    showToast('Sync failed: ' + err.message, 'danger');
+  }
+}
+
+// Notification toggles
+document.getElementById('settingNotifyEmail').addEventListener('change', e => {
+  document.getElementById('emailFields').style.display = e.target.checked ? '' : 'none';
+});
+document.getElementById('settingNotifySlack').addEventListener('change', e => {
+  document.getElementById('slackFields').style.display = e.target.checked ? '' : 'none';
+});
+
+loadSettings();
+loadJobStatus();
+</script>
+{% endblock %}

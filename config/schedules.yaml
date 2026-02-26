@@ -1,0 +1,322 @@
+# =============================================================================
+# Cannabis Data Aggregator - Collection Schedules
+# =============================================================================
+# Defines when each data source should be collected.
+#
+# Schedule types:
+#   interval  - Runs every N units (minutes/hours/days/weeks)
+#   cron      - Runs at specific times using cron expressions
+#
+# Cron fields: minute, hour, day_of_month, month, day_of_week
+#   Use standard cron syntax: * = any, */2 = every 2, 0-5 = range, 1,3,5 = list
+#   Days of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+#   OR use names: sun, mon, tue, wed, thu, fri, sat
+#
+# Examples:
+#   Daily at 2 AM:   type: cron, minute: 0, hour: 2
+#   Weekly Sunday:   type: cron, minute: 0, hour: 3, day_of_week: sun
+#   Monthly 1st:     type: cron, minute: 0, hour: 4, day_of_month: 1
+#   Every 6 hours:   type: interval, unit: hours, value: 6
+# =============================================================================
+
+schedules:
+
+  # ---------------------------------------------------------------------------
+  # LICENSE / DISPENSARY DATA
+  # Run weekly - licenses don't change that often but new ones are added
+  # ---------------------------------------------------------------------------
+
+  - id: sched_federal_hemp_weekly
+    name: "USDA Hemp Producers - Weekly"
+    source_id: usda_hemp_producers
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 2
+      day_of_week: sun   # Every Sunday at 2:00 AM
+    priority: 1
+    notes: "Federal hemp license data - weekly is sufficient"
+
+  - id: sched_co_med_licensees_weekly
+    name: "Colorado MED Licensees - Weekly"
+    source_id: co_med_licensees
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 2
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_wa_wslcb_licensees_weekly
+    name: "Washington WSLCB Licensees - Weekly"
+    source_id: wa_wslcb_licensees
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 2
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_or_olcc_licensees_weekly
+    name: "Oregon OLCC Licensees - Weekly"
+    source_id: or_olcc_licensees
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 3
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_or_olcc_geojson_weekly
+    name: "Oregon Dispensary GeoJSON - Weekly"
+    source_id: or_olcc_dispensary_locations
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 15
+      hour: 3
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ca_dcc_licensees_weekly
+    name: "California DCC Licensees - Weekly"
+    source_id: ca_dcc_licensees
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 3
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ok_omma_dispensaries_weekly
+    name: "Oklahoma OMMA Dispensaries - Weekly"
+    source_id: ok_omma_dispensaries
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 4
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ok_omma_growers_weekly
+    name: "Oklahoma OMMA Growers - Weekly"
+    source_id: ok_omma_growers
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 15
+      hour: 4
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ok_omma_processors_weekly
+    name: "Oklahoma OMMA Processors - Weekly"
+    source_id: ok_omma_processors
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 4
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_il_licenses_weekly
+    name: "Illinois IDFPR Cannabis Licenses - Weekly"
+    source_id: il_idfpr_cannabis_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 5
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ma_ccc_licensees_weekly
+    name: "Massachusetts CCC Licensees - Weekly"
+    source_id: ma_ccc_licensees
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 5
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_nj_crc_licenses_weekly
+    name: "New Jersey CRC Licenses - Weekly"
+    source_id: nj_crc_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 6
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ny_ocm_dispensaries_weekly
+    name: "New York OCM Dispensaries - Weekly"
+    source_id: ny_ocm_dispensaries
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 6
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ak_amco_licenses_weekly
+    name: "Alaska AMCO Licenses - Weekly"
+    source_id: ak_amco_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 7
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_ct_dcp_licenses_weekly
+    name: "Connecticut DCP Licenses - Weekly"
+    source_id: ct_dcp_cannabis_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 7
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_dc_abca_licenses_weekly
+    name: "DC ABCA Licenses - Weekly"
+    source_id: dc_abca_cannabis_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 8
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_nm_rld_licenses_weekly
+    name: "New Mexico RLD Licenses - Weekly"
+    source_id: nm_rld_cannabis_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 8
+      day_of_week: sun
+    priority: 2
+
+  - id: sched_wa_violations_weekly
+    name: "Washington WSLCB Violations - Weekly"
+    source_id: wa_wslcb_violations
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 9
+      day_of_week: sun
+    priority: 3
+
+  # ---------------------------------------------------------------------------
+  # SALES / REVENUE DATA
+  # Run monthly - sales data is typically reported monthly with a lag
+  # ---------------------------------------------------------------------------
+
+  - id: sched_co_med_sales_monthly
+    name: "Colorado MED Sales - Monthly"
+    source_id: co_med_sales_monthly
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 2
+      day_of_month: 5  # 5th of each month (give time for prior month data)
+    priority: 1
+
+  - id: sched_co_med_market_rates_monthly
+    name: "Colorado MED Market Rates - Monthly"
+    source_id: co_med_avg_market_rates
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 30
+      hour: 2
+      day_of_month: 5
+    priority: 1
+
+  - id: sched_wa_wslcb_sales_monthly
+    name: "Washington WSLCB Sales - Monthly"
+    source_id: wa_wslcb_sales_data
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 3
+      day_of_month: 10  # 10th of each month
+    priority: 1
+
+  - id: sched_ma_ccc_sales_monthly
+    name: "Massachusetts CCC Weekly Sales - Monthly Pull"
+    source_id: ma_ccc_weekly_sales
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 4
+      day_of_month: 5
+    priority: 1
+
+  # ---------------------------------------------------------------------------
+  # OPENSTREETMAP - Run monthly (community data updates less frequently)
+  # ---------------------------------------------------------------------------
+
+  - id: sched_osm_dispensaries_monthly
+    name: "OpenStreetMap Dispensaries - Monthly"
+    source_id: openstreetmap_dispensaries
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 1
+      day_of_month: 1  # 1st of each month at 1 AM
+    priority: 3
+    notes: "OSM data updates community-driven. Monthly pull is sufficient."
+
+  # ---------------------------------------------------------------------------
+  # HIGH-FREQUENCY SOURCES (bi-weekly or twice-weekly)
+  # For sources with frequent updates (new licenses, dispensary openings)
+  # ---------------------------------------------------------------------------
+
+  - id: sched_ny_ocm_licenses_biweekly
+    name: "New York OCM All Licenses - Bi-Weekly"
+    source_id: ny_ocm_all_licenses
+    enabled: true
+    schedule_type: cron
+    cron:
+      minute: 0
+      hour: 2
+      day_of_week: "mon,thu"  # Monday and Thursday at 2 AM
+    priority: 2
+    notes: "NY is a rapidly expanding market - check twice weekly for new licenses"
+
+  # ---------------------------------------------------------------------------
+  # INTERVAL-BASED SCHEDULES (alternative to cron for simple cases)
+  # ---------------------------------------------------------------------------
+
+  - id: sched_ok_transporters_interval
+    name: "Oklahoma OMMA Transporters - Every 3 Days"
+    source_id: ok_omma_transporter_licenses
+    enabled: true
+    schedule_type: interval
+    interval:
+      value: 3
+      unit: days
+    priority: 3

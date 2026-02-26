@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Map View{% endblock %}
+{% block page_title %}Map View{% endblock %}
+
+{% block topbar_actions %}
+<a href="/data" class="btn btn-sm btn-outline-secondary">
+  <i class="bi bi-table me-1"></i> Table View
+</a>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin="">
+<style>
+  #map { height: calc(100vh - 160px); border-radius: 6px; border: 1px solid #dee2e6; }
+  #mapControls { position: absolute; top: 170px; right: 1.25rem; z-index: 1000; width: 240px; }
+  .map-stat { font-size: .8rem; }
+  .leaflet-popup-content { font-size: .8rem; }
+  .leaflet-popup-content p { margin: .15rem 0; }
+  .leaflet-popup-content .fw-semibold { font-size: .85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="position-relative">
+  <!-- Map Controls Panel -->
+  <div id="mapControls" class="card shadow-sm">
+    <div class="card-header py-2">
+      <i class="bi bi-funnel me-1"></i> Filters
+    </div>
+    <div class="card-body p-2">
+      <div class="mb-2">
+        <label class="form-label mb-1" style="font-size:.75rem;">State</label>
+        <select class="form-select form-select-sm" id="mapState">
+          <option value="">All States</option>
+          {% for s in states %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label mb-1" style="font-size:.75rem;">Category</label>
+        <select class="form-select form-select-sm" id="mapCategory">
+          <option value="">All Categories</option>
+          {% for c in categories %}
+          <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label mb-1" style="font-size:.75rem;">Search</label>
+        <input type="text" class="form-control form-control-sm" id="mapSearch"
+               placeholder="Name or city…">
+      </div>
+      <button class="btn btn-sm btn-success w-100 mb-1" onclick="loadMapData()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+      <button class="btn btn-sm btn-outline-secondary w-100" onclick="resetMapFilters()">
+        Clear Filters
+      </button>
+      <hr class="my-2">
+      <div class="map-stat text-muted" id="mapStatLine">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Leaflet setup
+const map = L.map('map', {
+  center: [39.5, -98.35],
+  zoom: 4,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+// Category color map
+const CAT_COLORS = {
+  'dispensary':     '#28a745',
+  'retailer':       '#28a745',
+  'cultivator':     '#6f42c1',
+  'grower':         '#6f42c1',
+  'processor':      '#fd7e14',
+  'manufacturer':   '#fd7e14',
+  'testing lab':    '#17a2b8',
+  'transporter':    '#6c757d',
+  'delivery':       '#20c997',
+  'hemp':           '#ffc107',
+};
+
+function getCategoryColor(cat) {
+  if (!cat) return '#007bff';
+  const lower = cat.toLowerCase();
+  for (const [k, v] of Object.entries(CAT_COLORS)) {
+    if (lower.includes(k)) return v;
+  }
+  return '#007bff';
+}
+
+function makeIcon(color) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};
+           border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4);"></div>`,
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
+  });
+}
+
+let markerCluster = L.markerClusterGroup({ maxClusterRadius: 40 });
+map.addLayer(markerCluster);
+
+function resetMapFilters() {
+  document.getElementById('mapState').value = '';
+  document.getElementById('mapCategory').value = '';
+  document.getElementById('mapSearch').value = '';
+  loadMapData();
+}
+
+async function loadMapData() {
+  const state    = document.getElementById('mapState').value;
+  const category = document.getElementById('mapCategory').value;
+  const search   = document.getElementById('mapSearch').value;
+  document.getElementById('mapStatLine').textContent = 'Loading…';
+
+  const params = { has_gps: 1, per_page: 5000 };
+  if (state)    params.state    = state;
+  if (category) params.category = category;
+  if (search)   params.search   = search;
+
+  const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+
+  try {
+    const data = await apiGet('/api/records/geojson?' + qs);
+    markerCluster.clearLayers();
+
+    const features = data.features || [];
+    const markers = features.map(f => {
+      const [lng, lat] = f.geometry.coordinates;
+      const p = f.properties;
+      const color = getCategoryColor(p.category);
+      const marker = L.marker([lat, lng], { icon: makeIcon(color) });
+      marker.bindPopup(buildPopup(p));
+      return marker;
+    });
+
+    markerCluster.addLayers(markers);
+
+    const shown = features.length;
+    const total = data.properties?.total || data.numberMatched || shown;
+    document.getElementById('mapStatLine').textContent =
+      `Showing ${fmtNumber(shown)} of ${fmtNumber(total)} GPS-tagged records`;
+
+    // Fit bounds if markers present
+    if (markers.length > 0) {
+      try { map.fitBounds(markerCluster.getBounds(), { padding: [30, 30] }); }
+      catch (_) {}
+    }
+  } catch (err) {
+    document.getElementById('mapStatLine').textContent = 'Error: ' + err.message;
+  }
+}
+
+function buildPopup(p) {
+  let html = `<div class="fw-semibold mb-1">${escHtml(p.name || 'Unknown')}</div>`;
+  if (p.category)       html += `<p><span class="badge bg-secondary">${escHtml(p.category)}</span></p>`;
+  if (p.license_number) html += `<p><b>License:</b> ${escHtml(p.license_number)}</p>`;
+  if (p.license_status) html += `<p><b>Status:</b> ${escHtml(p.license_status)}</p>`;
+  if (p.address)        html += `<p><i class="bi bi-geo"></i> ${escHtml(p.address)}</p>`;
+  if (p.city)           html += `<p>${escHtml(p.city)}${p.state ? ', ' + p.state : ''}${p.zip_code ? ' ' + p.zip_code : ''}</p>`;
+  if (p.phone)          html += `<p><i class="bi bi-telephone"></i> ${escHtml(p.phone)}</p>`;
+  if (p.website) {
+    html += `<p><a href="${escHtml(p.website)}" target="_blank" rel="noopener">
+      <i class="bi bi-globe"></i> Website</a></p>`;
+  }
+  return html;
+}
+
+// Legend
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = () => {
+  const div = L.DomUtil.create('div');
+  div.style.cssText = 'background:#fff;padding:8px 12px;border-radius:6px;font-size:.75rem;box-shadow:0 1px 5px rgba(0,0,0,.2);';
+  const items = [
+    ['Dispensary/Retailer', '#28a745'],
+    ['Cultivator/Grower',   '#6f42c1'],
+    ['Processor/Mfg',       '#fd7e14'],
+    ['Testing Lab',         '#17a2b8'],
+    ['Transporter',         '#6c757d'],
+    ['Hemp',                '#ffc107'],
+    ['Other',               '#007bff'],
+  ];
+  div.innerHTML = '<b style="font-size:.72rem;">Category</b><br>' +
+    items.map(([l,c]) =>
+      `<div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${c};border:2px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.3);flex-shrink:0;"></div>
+        <span>${l}</span></div>`
+    ).join('');
+  return div;
+};
+legend.addTo(map);
+
+// Debounced search
+const debouncedLoad = debounce(loadMapData, 500);
+document.getElementById('mapSearch').addEventListener('input', debouncedLoad);
+['mapState','mapCategory'].forEach(id => {
+  document.getElementById(id).addEventListener('change', loadMapData);
+});
+
+// Initial load
+loadMapData();
+</script>
+{% endblock %}

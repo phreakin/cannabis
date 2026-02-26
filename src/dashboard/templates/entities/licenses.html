@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Cannabis Licenses – Cannabis Data Aggregator{% endblock %}
+{% block page_title %}Cannabis Licenses{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-sm btn-primary" onclick="openModal()">
+    <i class="bi bi-plus-lg me-1"></i>Add License
+  </button>
+  <a href="/entities/import?type=licenses" class="btn btn-sm btn-outline-success">
+    <i class="bi bi-upload me-1"></i>Import
+  </a>
+  <a href="/api/entities/licenses?format=csv" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-download me-1"></i>Export CSV
+  </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Table card ─────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-body p-0">
+    <table id="tbl" class="table table-hover align-middle mb-0" style="width:100%">
+      <thead>
+        <tr>
+          <th style="width:44px">#</th>
+          <th>License #</th>
+          <th>Business Name</th>
+          <th>License Type</th>
+          <th>Status</th>
+          <th>City / State</th>
+          <th style="width:100px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Add / Edit Modal ───────────────────────────────────────────── -->
+<div class="modal fade" id="entityModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Add License</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="entityId">
+
+        <div class="form-section">
+          <div class="form-section-title">License Info</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">License # <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="f_license_number" placeholder="10004">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">License Type</label>
+              <select class="form-select" id="f_license_type">
+                <option value="">— Select —</option>
+                <option>Retail Store</option>
+                <option>Standard Cultivation Facility</option>
+                <option>Limited Cultivation Facility</option>
+                <option>Product Manufacturing Facility</option>
+                <option>Concentrate Manufacturing Facility</option>
+                <option>Testing Facility</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">License Status</label>
+              <select class="form-select" id="f_license_status">
+                <option value="">— Select —</option>
+                <option>Active-Operating</option>
+                <option>Expired</option>
+                <option>Revoked</option>
+                <option>Surrendered</option>
+                <option>Suspended</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">License URL</label>
+              <input type="url" class="form-control" id="f_license_url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Business</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Business Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="f_business_name">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">DBA Name</label>
+              <input type="text" class="form-control" id="f_dba_name">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Business License #</label>
+              <input type="text" class="form-control" id="f_business_license_number">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Business License URL</label>
+              <input type="url" class="form-control" id="f_business_license_url" placeholder="https://...">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-title">Location</div>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Street</label>
+              <input type="text" class="form-control" id="f_street">
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">City</label>
+              <input type="text" class="form-control" id="f_city">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">State</label>
+              <input type="text" class="form-control" id="f_state" maxlength="2" placeholder="AK">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Country</label>
+              <input type="text" class="form-control" id="f_country" maxlength="2" value="US">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">ZIP</label>
+              <input type="text" class="form-control" id="f_zipcode">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section mb-0">
+          <div class="form-section-title">Source Metadata</div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Source State</label>
+              <input type="text" class="form-control" id="f_source_state" maxlength="2" placeholder="AK">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Source File</label>
+              <input type="text" class="form-control" id="f_source_file">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div id="modalError" class="text-danger small me-auto" style="display:none"></div>
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="saveBtn" onclick="saveEntity()">
+          <span id="saveBtnText">Save License</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete confirm Modal ───────────────────────────────────────── -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <i class="bi bi-trash3 text-danger" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-1 fw-semibold">Delete this license?</p>
+        <p class="text-muted small">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger btn-sm" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/entities/licenses';
+let table, editingId = null, deletingId = null;
+
+const STATUS_BADGES = {
+  'Active-Operating': 'success',
+  'Expired':          'secondary',
+  'Revoked':          'danger',
+  'Surrendered':      'warning',
+  'Suspended':        'warning',
+};
+
+function statusBadge(v) {
+  if (!v) return '—';
+  const cls = STATUS_BADGES[v] || 'secondary';
+  return `<span class="badge bg-${cls}">${v}</span>`;
+}
+
+$(document).ready(function () {
+  table = $('#tbl').DataTable({
+    columns: [
+      { data: 'id', width: '44px' },
+      { data: 'license_number', defaultContent: '—', render: (v, t, r) =>
+          r.license_url
+            ? `<a href="${r.license_url}" target="_blank">${v || '—'}</a>`
+            : (v || '—') },
+      { data: 'business_name' },
+      { data: 'license_type', defaultContent: '—' },
+      { data: 'license_status', render: statusBadge },
+      { data: null, render: (r) => [r.city, r.state].filter(Boolean).join(', ') || '—' },
+      { data: 'id', orderable: false, render: (id) =>
+          `<div class="d-flex gap-1">
+            <button class="btn btn-xs btn-outline-primary" onclick="editEntity(${id})" title="Edit"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-xs btn-outline-danger" onclick="confirmDelete(${id})" title="Delete"><i class="bi bi-trash3"></i></button>
+          </div>` },
+    ],
+    order: [[2, 'asc']],
+    pageLength: 25,
+    language: { emptyTable: 'No licenses yet. Click <strong>Add License</strong> or Import to get started.' }
+  });
+  loadData();
+});
+
+function loadData() {
+  fetch(API).then(r => r.json()).then(d => {
+    if (d.success) { table.clear().rows.add(d.data).draw(); }
+  }).catch(console.error);
+}
+
+const ALL_FIELDS = [
+  'license_number', 'license_url', 'business_license_number', 'business_license_url',
+  'license_type', 'license_status', 'business_name', 'dba_name',
+  'street', 'city', 'state', 'zipcode', 'country',
+  'source_state', 'source_file',
+];
+
+function openModal(data) {
+  editingId = data ? data.id : null;
+  document.getElementById('modalTitle').textContent    = data ? 'Edit License' : 'Add License';
+  document.getElementById('saveBtnText').textContent   = data ? 'Save Changes' : 'Save License';
+  document.getElementById('modalError').style.display = 'none';
+
+  ALL_FIELDS.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) el.value = data ? (data[f] ?? '') : (f === 'country' ? 'US' : '');
+  });
+  new bootstrap.Modal(document.getElementById('entityModal')).show();
+}
+
+function editEntity(id) {
+  fetch(`${API}/${id}`).then(r => r.json()).then(d => { if (d.success) openModal(d.data); });
+}
+
+function saveEntity() {
+  const payload = {};
+  ALL_FIELDS.forEach(f => {
+    const el = document.getElementById('f_' + f);
+    if (el) payload[f] = el.value.trim() || null;
+  });
+
+  const errEl = document.getElementById('modalError');
+  if (!payload.business_name) {
+    errEl.textContent = 'Business Name is required.';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const method = editingId ? 'PUT' : 'POST';
+  const url    = editingId ? `${API}/${editingId}` : API;
+  const btn    = document.getElementById('saveBtn');
+  btn.disabled = true;
+
+  fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    .then(r => r.json())
+    .then(d => {
+      btn.disabled = false;
+      if (d.success) {
+        bootstrap.Modal.getInstance(document.getElementById('entityModal')).hide();
+        loadData();
+      } else {
+        errEl.textContent    = d.error || 'Save failed.';
+        errEl.style.display  = 'block';
+      }
+    })
+    .catch(e => { btn.disabled = false; errEl.textContent = e.message; errEl.style.display = 'block'; });
+}
+
+function confirmDelete(id) {
+  deletingId = id;
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+  if (!deletingId) return;
+  fetch(`${API}/${deletingId}`, { method: 'DELETE' })
+    .then(r => r.json()).then(d => {
+      bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+      if (d.success) loadData();
+    });
+});
+</script>
+{% endblock %}

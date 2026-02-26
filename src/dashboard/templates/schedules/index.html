@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Schedules — Cannabis Data Aggregator{% endblock %}
+{% block page_title %}Collection Schedules{% endblock %}
+
+{% block topbar_actions %}
+<a href="/schedules/new" class="btn btn-sm btn-primary">
+  <i class="bi bi-plus-lg me-1"></i> Add Schedule
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="schedulesTable">
+        <thead>
+          <tr>
+            <th>Schedule Name</th>
+            <th>Source</th>
+            <th>Type</th>
+            <th>Timing</th>
+            <th>Priority</th>
+            <th>Last Run</th>
+            <th>Next Run</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in schedules %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ s.name }}</div>
+              <div class="text-muted-sm">{{ s.schedule_id }}</div>
+            </td>
+            <td>
+              <a href="/sources/{{ s.source_id }}/edit" class="text-decoration-none">
+                {{ s.source_name }}
+              </a>
+            </td>
+            <td>
+              <span class="badge {{ 'bg-info' if s.schedule_type == 'cron' else 'bg-secondary' }}">
+                {{ s.schedule_type }}
+              </span>
+            </td>
+            <td style="font-size:.8rem;">
+              {% if s.schedule_type == 'cron' %}
+              <code class="text-muted">
+                {{ s.cron_minute }} {{ s.cron_hour }}
+                {{ s.cron_day_of_month }} {{ s.cron_month }}
+                {{ s.cron_day_of_week }}
+              </code>
+              {% else %}
+              Every {{ s.interval_value }} {{ s.interval_unit }}
+              {% endif %}
+            </td>
+            <td>
+              {% if s.priority == 1 %}<span class="badge bg-danger">High</span>
+              {% elif s.priority == 3 %}<span class="badge bg-secondary">Low</span>
+              {% else %}<span class="badge bg-primary">Normal</span>{% endif %}
+            </td>
+            <td class="text-muted-sm">
+              {{ s.last_run[:16].replace('T',' ') if s.last_run else '—' }}
+            </td>
+            <td class="text-muted-sm">
+              {{ s.next_run[:16].replace('T',' ') if s.next_run else '—' }}
+            </td>
+            <td>
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox"
+                       {{ 'checked' if s.enabled else '' }}
+                       onchange="toggleSchedule({{ s.id }}, this)">
+              </div>
+            </td>
+            <td class="text-end">
+              <div class="d-flex gap-1 justify-content-end">
+                <a href="/schedules/{{ s.id }}/edit" class="btn btn-sm btn-outline-secondary" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-danger"
+                        onclick="deleteSchedule({{ s.id }}, '{{ s.name }}')" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5">
+              <div class="text-muted mb-2">No schedules configured</div>
+              <a href="/schedules/new" class="btn btn-primary btn-sm">Add Your First Schedule</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSchedule(id, checkbox) {
+  fetch(`/api/schedules/${id}/toggle`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => showToast(`Schedule ${d.enabled ? 'enabled' : 'disabled'}`, 'success'))
+    .catch(() => { checkbox.checked = !checkbox.checked; showToast('Failed', 'danger'); });
+}
+function deleteSchedule(id, name) {
+  if (!confirm(`Delete schedule "${name}"?`)) return;
+  fetch(`/api/schedules/${id}`, { method: 'DELETE' })
+    .then(() => { showToast('Schedule deleted', 'success'); location.reload(); });
+}
+</script>
+{% endblock %}
