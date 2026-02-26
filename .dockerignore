@@ -84,6 +84,11 @@ Dockerfile*
 *.md
 
 # --------------------------------------------------
+# Scripts and config you don't want copied
+# (recreate inside container instead)
+prep-github.ps1
+
+# --------------------------------------------------
 # Node modules and build artifacts
 # (reinstall inside container instead)
 # --------------------------------------------------
