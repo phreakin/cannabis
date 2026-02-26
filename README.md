@@ -1,5 +1,10 @@
-<<<<<<< HEAD
 # Cannabis Data Aggregator
+Project: ${PROJECT_NAME}
+Author: ${AUTHOR}  
+Website: ${AUTHOR_WEBSITE}  
+Contact: ${AUTHOR_EMAIL}
+
+---
 
 Automated collection and management of US cannabis open data from state and federal APIs.
 Aggregates dispensary locations, license data, sales figures, grower/processor records, and more

@@ -1,11 +1,11 @@
 # Changelog — Cannabis Data Aggregator
 
 All notable changes are documented here.
-Format: `[Version] YYYY-MM-DD — Summary`
+Format: `[Version] MM-DD-YYYY hh:mm:ss`
 
 ---
 
-## [Unreleased] — 2026-02-25
+## [Unreleased] — 02-25-2026
 
 ### Added
 - **Geocoding script** (`scripts/geocode_records.py`) — batch geocodes raw records with address data but no lat/lng using the free US Census Geocoder API (no API key required). Supports `--state`, `--limit`, and `--dry-run` flags.

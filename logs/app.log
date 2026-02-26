@@ -155,3 +155,13 @@
 2026-02-25 21:48:43,184 [INFO] werkzeug: 10.0.0.178 - - [25/Feb/2026 21:48:43] "[36mGET /static/js/dashboard.js HTTP/1.1[0m" 304 -
 2026-02-25 21:48:48,605 [INFO] werkzeug: 10.0.0.178 - - [25/Feb/2026 21:48:48] "[31m[1mPOST /api/entities/strains/preview HTTP/1.1[0m" 400 -
 2026-02-25 21:49:53,444 [INFO] werkzeug: 10.0.0.178 - - [25/Feb/2026 21:49:53] "[31m[1mGET /api/entities/strains/sample?fmt=csv HTTP/1.1[0m" 400 -
+2026-02-26 00:34:43,867 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:43] "GET / HTTP/1.1" 200 -
+2026-02-26 00:34:43,937 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:43] "[36mGET /static/js/dashboard.js HTTP/1.1[0m" 304 -
+2026-02-26 00:34:44,004 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:44] "GET /api/sources?per_page=20 HTTP/1.1" 200 -
+2026-02-26 00:34:46,517 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:46] "GET / HTTP/1.1" 200 -
+2026-02-26 00:34:46,557 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:46] "GET /static/js/dashboard.js HTTP/1.1" 200 -
+2026-02-26 00:34:46,720 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:46] "GET /api/sources?per_page=20 HTTP/1.1" 200 -
+2026-02-26 00:34:46,870 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:46] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-02-26 00:34:54,745 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:54] "GET /data/map HTTP/1.1" 200 -
+2026-02-26 00:34:54,787 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:54] "[36mGET /static/js/dashboard.js HTTP/1.1[0m" 304 -
+2026-02-26 00:34:56,073 [INFO] werkzeug: 10.0.0.178 - - [26/Feb/2026 00:34:56] "GET /api/records/geojson?has_gps=1&per_page=5000 HTTP/1.1" 200 -
