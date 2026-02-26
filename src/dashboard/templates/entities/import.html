@@ -15,49 +15,49 @@
   .step-item { display:flex; flex-direction:column; align-items:center; flex:1; position:relative; }
   .step-item:not(:last-child)::after {
     content:''; position:absolute; top:18px; left:60%; width:80%; height:2px;
-    background:#dee2e6; z-index:0;
+    background:#21262d; z-index:0;
   }
-  .step-item.done:not(:last-child)::after  { background:#198754; }
-  .step-item.active:not(:last-child)::after { background:#dee2e6; }
+  .step-item.done:not(:last-child)::after   { background:#3fb950; }
+  .step-item.active:not(:last-child)::after { background:#21262d; }
   .step-circle {
     width:36px; height:36px; border-radius:50%; display:flex;
     align-items:center; justify-content:center; font-weight:700;
-    font-size:.85rem; z-index:1; border:2px solid #dee2e6;
-    background:#fff; color:#6c757d;
+    font-size:.85rem; z-index:1; border:2px solid #30363d;
+    background:#0d1117; color:#8b949e;
   }
-  .step-item.active .step-circle { border-color:#0d6efd; background:#0d6efd; color:#fff; }
-  .step-item.done   .step-circle { border-color:#198754; background:#198754; color:#fff; }
-  .step-label { font-size:.75rem; color:#6c757d; margin-top:.35rem; white-space:nowrap; }
-  .step-item.active .step-label { color:#0d6efd; font-weight:600; }
-  .step-item.done   .step-label { color:#198754; }
+  .step-item.active .step-circle { border-color:#388bfd; background:#388bfd; color:#fff; }
+  .step-item.done   .step-circle { border-color:#3fb950; background:#3fb950; color:#fff; }
+  .step-label { font-size:.75rem; color:#8b949e; margin-top:.35rem; white-space:nowrap; }
+  .step-item.active .step-label { color:#79c0ff; font-weight:600; }
+  .step-item.done   .step-label { color:#3fb950; }
 
   /* ── Upload drop zone ────────────────────────────────────────── */
   .drop-zone {
-    border:2px dashed #dee2e6; border-radius:.75rem; padding:3rem 2rem;
+    border:2px dashed #30363d; border-radius:.75rem; padding:3rem 2rem;
     text-align:center; cursor:pointer; transition:border-color .2s, background .2s;
   }
-  .drop-zone:hover, .drop-zone.dragover { border-color:#0d6efd; background:#f0f5ff; }
-  .drop-zone .drop-icon { font-size:3rem; color:#adb5bd; display:block; margin-bottom:.75rem; }
+  .drop-zone:hover, .drop-zone.dragover { border-color:#388bfd; background:rgba(56,139,253,.06); }
+  .drop-zone .drop-icon { font-size:3rem; color:#484f58; display:block; margin-bottom:.75rem; }
   .drop-zone input[type=file] { display:none; }
-  .file-selected { border-color:#198754 !important; background:#f0faf5 !important; }
-  .file-selected .drop-icon { color:#198754 !important; }
+  .file-selected { border-color:#3fb950 !important; background:rgba(63,185,80,.06) !important; }
+  .file-selected .drop-icon { color:#3fb950 !important; }
 
   /* ── Mapping table ───────────────────────────────────────────── */
-  .map-table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; color:#6c757d; }
+  .map-table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; color:#8b949e; }
   .map-select { min-width:180px; }
-  .map-preview-cell { font-size:.8rem; color:#495057; max-width:200px;
+  .map-preview-cell { font-size:.8rem; color:#8b949e; max-width:200px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .map-row.unmapped td { opacity:.6; }
-  .map-row.required-missing td:nth-child(2) select { border-color:#dc3545; }
+  .map-row.unmapped td { opacity:.5; }
+  .map-row.required-missing td:nth-child(2) select { border-color:#f85149; }
 
   /* ── Preview table ───────────────────────────────────────────── */
   #previewTable { font-size:.82rem; }
-  #previewTable thead { background:#f8f9fa; }
+  #previewTable thead { background:#161b22; }
 
   /* ── Results ─────────────────────────────────────────────────── */
   .result-stat { text-align:center; padding:1rem; border-radius:.5rem; }
-  .result-stat .stat-num { font-size:2rem; font-weight:700; line-height:1; }
-  .result-stat .stat-label { font-size:.8rem; color:#6c757d; margin-top:.25rem; }
+  .result-stat .stat-num { font-size:2rem; font-weight:700; line-height:1; font-family:'Fira Code',monospace; }
+  .result-stat .stat-label { font-size:.8rem; color:#8b949e; margin-top:.25rem; }
 
   .step-panel { display:none; }
   .step-panel.active { display:block; }
@@ -95,11 +95,11 @@
       <div class="mb-4">
         <label class="form-label fw-semibold">Entity Type</label>
         <div class="d-flex flex-wrap gap-2" id="typeSelector">
-          {% for t, label in [('companies','Companies'),('doctors','Doctors'),('brands','Brands'),('products','Products')] %}
+          {% for t, label in [('companies','Companies'),('doctors','Doctors'),('brands','Brands'),('products','Products'),('strains','Strains')] %}
           <button type="button"
             class="btn {{ 'btn-primary' if t == entity_type else 'btn-outline-secondary' }} entity-type-btn"
             data-type="{{ t }}">
-            <i class="bi bi-{{ 'building' if t=='companies' else 'person-badge' if t=='doctors' else 'tag' if t=='brands' else 'box-seam' }} me-1"></i>
+            <i class="bi bi-{{ 'building' if t=='companies' else 'person-badge' if t=='doctors' else 'tag' if t=='brands' else 'flower1' if t=='strains' else 'box-seam' }} me-1"></i>
             {{ label }}
           </button>
           {% endfor %}
@@ -263,25 +263,25 @@
 
         <div class="row g-3 mb-4">
           <div class="col-6 col-md-3">
-            <div class="result-stat bg-light">
-              <div class="stat-num text-dark" id="resTotal">—</div>
+            <div class="result-stat" style="background:rgba(255,255,255,.04)">
+              <div class="stat-num" id="resTotal">—</div>
               <div class="stat-label">Total Rows</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="result-stat" style="background:#d1e7dd">
+            <div class="result-stat" style="background:rgba(63,185,80,.12)">
               <div class="stat-num text-success" id="resInserted">—</div>
               <div class="stat-label">Inserted</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="result-stat" style="background:#fff3cd">
+            <div class="result-stat" style="background:rgba(210,153,34,.12)">
               <div class="stat-num text-warning" id="resSkipped">—</div>
               <div class="stat-label">Skipped</div>
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="result-stat" style="background:#f8d7da">
+            <div class="result-stat" style="background:rgba(248,81,73,.12)">
               <div class="stat-num text-danger" id="resErrors">—</div>
               <div class="stat-label">Errors</div>
             </div>
@@ -333,11 +333,11 @@ let previewData   = null;   // response from /preview
 
 const ENTITY_LABELS = {
   companies: 'Companies', doctors: 'Doctors',
-  brands: 'Brands', products: 'Products'
+  brands: 'Brands', products: 'Products', strains: 'Strains'
 };
 const ENTITY_ICONS = {
   companies: 'building', doctors: 'person-badge',
-  brands: 'tag', products: 'box-seam'
+  brands: 'tag', products: 'box-seam', strains: 'flower1'
 };
 
 // ── Utility ──────────────────────────────────────────────────────
@@ -560,16 +560,16 @@ function buildResultsUI(data) {
   document.getElementById('importFailBanner').classList.add('d-none');
   document.getElementById('errSection').classList.add('d-none');
 
-  if (!data.success && !data.inserted && !data.skipped) {
+  if (!data.success) {
     document.getElementById('importFailBanner').classList.remove('d-none');
     document.getElementById('failMsg').textContent = data.error || 'Unknown error';
     return;
   }
 
   document.getElementById('importSuccessBanner').classList.remove('d-none');
-  document.getElementById('resTotal').textContent    = data.total_rows ?? '—';
-  document.getElementById('resInserted').textContent = data.inserted   ?? 0;
-  document.getElementById('resSkipped').textContent  = data.skipped    ?? 0;
+  document.getElementById('resTotal').textContent    = (data.imported ?? 0) + (data.skipped ?? 0);
+  document.getElementById('resInserted').textContent = data.imported  ?? 0;
+  document.getElementById('resSkipped').textContent  = data.skipped   ?? 0;
   document.getElementById('resErrors').textContent   = (data.errors || []).length;
 
   // View link

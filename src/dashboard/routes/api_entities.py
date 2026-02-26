@@ -633,6 +633,14 @@ _FIELD_LABELS = {
     'sku': 'SKU', 'strain_name': 'Strain Name', 'strain_type': 'Strain Type',
     'thc_percentage': 'THC %', 'cbd_percentage': 'CBD %', 'price': 'Price',
     'price_unit': 'Price Unit', 'weight_grams': 'Weight (g)', 'is_active': 'Is Active',
+    # Strain cannabinoids + characteristics
+    'thc': 'THC %', 'thca': 'THCA %', 'thcv': 'THCV %',
+    'cbd': 'CBD %', 'cbda': 'CBDA %', 'cbdv': 'CBDV %',
+    'cbn': 'CBN %', 'cbg': 'CBG %', 'cbc': 'CBC %',
+    'crosses': 'Crosses', 'breeder': 'Breeder',
+    'effects': 'Effects', 'ailments': 'Ailments',
+    'flavors': 'Flavors', 'terpenes': 'Terpenes',
+    'source_id': 'Source ID', 'status': 'Status',
 }
 
 # ---------------------------------------------------------------------------
@@ -753,11 +761,11 @@ def preview_import(entity_type):
         "success": True,
         "total_rows": len(rows),
         "headers": headers,
+        "rows": rows[:10],          # preview rows (JS expects "rows")
         "auto_mapping": mapping,
         "field_options": field_options,
         "field_labels": _FIELD_LABELS,
         "required_fields": _ENTITY_REQUIRED.get(entity_type, []),
-        "preview": rows[:10],
     })
 
 
@@ -1019,6 +1027,13 @@ def _apply_strain(obj: CannabisStrain, data: dict):
     for f in STRAIN_INT_FIELDS:
         if f in data:
             setattr(obj, f, _safe_int(data[f]))
+
+
+# Register strains in the CSV import pipeline
+_ENTITY_ALL_FIELDS['strains'] = STRAIN_STR_FIELDS + list(STRAIN_FLOAT_FIELDS) + list(STRAIN_INT_FIELDS)
+_ENTITY_REQUIRED['strains']   = ['name']
+_ENTITY_MODELS_MAP['strains'] = (CannabisStrain, _apply_strain)
+_ENTITY_DUPE_KEYS['strains']  = ['name', 'slug']
 
 
 @api_entities_bp.route("/strains", methods=["GET"])

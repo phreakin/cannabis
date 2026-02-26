@@ -355,15 +355,128 @@ cannabis-data-aggregator/
 
 ## Docker
 
+### Prerequisites
+
+- [Docker Desktop](https://docs.docker.com/get-docker/) 24+ (or Docker Engine + Compose plugin v2)
+- `.env` file configured — copy and edit `.env.example` first
+
+### Quick Start — SQLite (zero-config)
+
+Runs the app with a local SQLite database stored in `./data/`. No external services needed.
+
 ```bash
-# SQLite (default)
-docker compose up
+cp .env.example .env
+# Edit .env: set FLASK_SECRET_KEY and any API tokens you want
+# Ensure DATABASE_URL is set to SQLite (default):
+#   DATABASE_URL=sqlite:///data/cannabis_aggregator.db
 
-# PostgreSQL
-docker compose --profile postgres up
+# Build and start
+docker compose up --build -d
 
-# See pgAdmin at http://localhost:5050
+# First-run: initialize database and load sources
+docker compose exec app python main.py --mode setup
+docker compose exec app python main.py --mode seed
 ```
+
+Open **http://localhost:5000** in your browser.
+
+---
+
+### With MySQL
+
+Starts the app plus a MySQL 8.0 container using the `mysql` profile.
+
+```bash
+# In .env, configure:
+#   DATABASE_URL=mysql+pymysql://cannabis:Passw0rd@db:3306/cannabis_data
+#   MYSQL_ROOT_PASSWORD=your-root-password
+#   MYSQL_DATABASE=cannabis_data
+#   MYSQL_USER=cannabis
+#   MYSQL_PASSWORD=your-password
+
+docker compose --profile mysql up --build -d
+
+# Wait ~10 s for MySQL to be ready, then initialise:
+docker compose exec app python main.py --mode setup
+docker compose exec app python main.py --mode seed
+```
+
+---
+
+### Common Commands
+
+```bash
+# Follow application logs
+docker compose logs -f app
+
+# Run a manual collection of all enabled sources
+docker compose exec app python main.py --mode collect --all
+
+# Collect a specific source
+docker compose exec app python main.py --mode collect --source co_med_licensees
+
+# Export data
+docker compose exec app python scripts/export_data.py --format csv
+
+# Open a shell in the container
+docker compose exec app bash
+
+# Restart the app (picks up .env changes)
+docker compose restart app
+
+# Stop all services (keeps volumes)
+docker compose down
+
+# Stop and destroy all data (irreversible)
+docker compose down -v
+```
+
+---
+
+### Volumes & Mounts
+
+| Mount | Purpose |
+|---|---|
+| `./data` → `/app/data` | Database file, exports, raw & processed data |
+| `./logs` → `/app/logs` | Rotating application log files |
+| `./config` → `/app/config` | `sources.yaml`, `schedules.yaml` — editable live |
+| `mysql_data` (named) | MySQL data directory (persists across restarts) |
+
+> **Tip:** Because `./config` is bind-mounted, you can edit `config/sources.yaml` and add new
+> data sources **without rebuilding the image**. Just `docker compose restart app` to reload.
+
+---
+
+### Building the Image Standalone
+
+```bash
+# Build
+docker build -t cannabis-aggregator .
+
+# Run (SQLite, data persisted to host ./data)
+docker run -d \
+  --name cannabis-aggregator \
+  -p 5000:5000 \
+  -v "$(pwd)/data:/app/data" \
+  -v "$(pwd)/logs:/app/logs" \
+  -v "$(pwd)/config:/app/config" \
+  --env-file .env \
+  cannabis-aggregator
+```
+
+---
+
+### Production Notes
+
+| Setting | Recommendation |
+|---|---|
+| `FLASK_SECRET_KEY` | Generate with `openssl rand -hex 32` — never use the default |
+| `FLASK_ENV` | Set to `production` |
+| `FLASK_DEBUG` | Set to `false` |
+| Database | Use MySQL (or PostgreSQL via `DATABASE_URL=postgresql://...`) for multi-user deployments |
+| Reverse proxy | Place nginx or Caddy in front — expose only port 5000 internally |
+| TLS | Terminate SSL at the reverse proxy, not in Flask |
+| Updates | `docker compose pull && docker compose up --build -d` |
 
 ---
 
